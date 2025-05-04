@@ -4,32 +4,23 @@
 
 	let { data }: PageProps = $props();
 	let table = $state(data.data);
-	let selectedClinic = $state(data.clinics[0].value);
 
 	console.log(data.data);
 	let keys = [3, 7, 2, 8, 9, 10];
 </script>
 
-<div class="flex flex-col">
-	<div class="m-2 flex items-center">
-		<form action="/soa/" class="flex items-center gap-2">
-			<label for="clinic_name">
-				<h1>Clinic</h1>
-				<select name="clinic_name" bind:value={selectedClinic}>
-					{#each data?.clinics as clinic}
-						<option value={clinic.value}>{clinic.label}</option>
-					{/each}
-				</select>
-				<a
-					href={`/soa/${selectedClinic}`}
-					class="rounded border p-2 hover:cursor-pointer hover:bg-blue-300"
-					type="submit"
-					>QUERY
-				</a>
-			</label>
-		</form>
+<div id="printarea" class="flex flex-col">
+	<div class="grid-row-3 grid px-2">
+		<div>
+			<h1>SOA CLINIC</h1>
+		</div>
+		<div class="text-center">
+			<h1 class="text-4xl">{data.clinicName}</h1>
+		</div>
 	</div>
-	<table class=" dark:text-gray-40 mx-5 w-[97%] text-left text-sm text-gray-500 rtl:text-right">
+	<table
+		class=" dark:text-gray-40 mx-5 mt-2 w-[97%] text-left text-sm text-gray-500 rtl:text-right"
+	>
 		<thead class="bg-gray-50 text-xs text-gray-700 uppercase dark:bg-gray-700 dark:text-gray-400">
 			<tr>
 				{#each keys as key}
@@ -58,3 +49,11 @@
 		</tbody>
 	</table>
 </div>
+
+<style>
+	@media print {
+		#printarea {
+			display: block;
+		}
+	}
+</style>
