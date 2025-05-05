@@ -59,6 +59,7 @@ export const actions = {
         paidAmount: data.get('paid_amount'),
         excessPayment: data.get('excess_payment')
       } as typeof records.$inferInsert);
+
       await db.insert(history).values({
         historyType: "in",
         imageData: await convertFileToBytea(data.get('in-img') as File),
@@ -70,16 +71,16 @@ export const actions = {
         historyTime: data.get('time')
       } as unknown as typeof history.$inferInsert);
 
-      await db.insert(history).values({
-        historyType: "out",
-        imageData: await convertFileToBytea(data.get('out-img') as File),
-        historyDate: data.get('date'),
-        recordId: (await db.select()
-          .from(records)
-          .orderBy(desc(records.caseNo)) // Replace 'id' with your primary key or a suitable ordering column
-          .limit(1))[0]?.caseNo,
-        historyTime: data.get('time')
-      } as unknown as typeof history.$inferInsert);
+      // await db.insert(history).values({
+      //   historyType: "out",
+      //   imageData: await convertFileToBytea(data.get('out-img') as File),
+      //   historyDate: data.get('date'),
+      //   recordId: (await db.select()
+      //     .from(records)
+      //     .orderBy(desc(records.caseNo)) // Replace 'id' with your primary key or a suitable ordering column
+      //     .limit(1))[0]?.caseNo,
+      //   historyTime: data.get('time')
+      // } as unknown as typeof history.$inferInsert);
 
     } catch (error) {
       console.error('Error inserting record:', error);

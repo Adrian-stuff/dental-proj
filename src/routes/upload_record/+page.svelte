@@ -61,76 +61,100 @@
 	console.log('clinics', data?.clinics);
 </script>
 
-<div class="mt-5 flex justify-center">
+<div class="mt-8 flex justify-center">
 	{#if form?.success}
-		<p>success</p>
+		<p class="font-semibold text-green-500">Success!</p>
 	{:else if form?.error}
-		<p>error {form?.error}</p>
+		<p class="text-red-500">Error: {form?.error}</p>
 	{/if}
 
 	<form
-		class="flex flex-col items-center justify-center gap-5"
+		class="mb-4 flex w-full max-w-lg flex-col gap-6 rounded-md bg-white px-8 pb-8 shadow-md"
 		method="POST"
 		enctype="multipart/form-data"
 	>
-		<div class="flex flex-row gap-10">
-			<div class="gap- flex flex-col gap-2">
-				<label for="case_type">
-					<h1>Case type</h1>
-					<select name="case_type" bind:value={case_type} required>
+		<!-- <h2 class="mb-4 text-xl font-semibold text-gray-700">Add New Record</h2> -->
+		<div class="flex flex-row gap-8">
+			<div class="flex w-1/2 flex-col gap-4">
+				<label for="case_type" class="mb-2 block text-sm font-bold text-gray-700">
+					Case type
+					<select
+						name="case_type"
+						bind:value={case_type}
+						required
+						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+					>
 						{#each data?.caseTypes as caseType}
 							<option value={caseType.value}>{caseType.label}</option>
 						{/each}
 					</select>
-					<!-- <input type="text" name="case_type" value={case_type} hidden /> -->
 				</label>
-				<label for="case_number" class="">
-					<h1>Case number</h1>
+				<label for="case_number" class="mb-2 block text-sm font-bold text-gray-700">
+					Case number
 					<input
 						type="text"
 						name="case_number"
-						class="w-20 border-2 border-dashed"
+						class="focus:shadow-outline w-full cursor-not-allowed appearance-none rounded border border-dashed bg-gray-100 px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
 						placeholder="Case number"
 						value={data.caseNo}
 						disabled
 					/>
 				</label>
 			</div>
-			<div class="flex flex-col gap-2">
-				<label for="doctor_name">
-					<h1>Doctor</h1>
-					<select name="doctor_name" required>
+			<div class="flex w-1/2 flex-col gap-4">
+				<label for="doctor_name" class="mb-2 block text-sm font-bold text-gray-700">
+					Doctor
+					<select
+						name="doctor_name"
+						required
+						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+					>
 						{#each data?.doctors as doctor}
 							<option value={doctor.value}>{doctor.label}</option>
 						{/each}
 					</select>
 				</label>
-				<label for="clinic_name">
-					<h1>Clinic</h1>
-					<select name="clinic_name" required>
+				<label for="clinic_name" class="mb-2 block text-sm font-bold text-gray-700">
+					Clinic
+					<select
+						name="clinic_name"
+						required
+						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+					>
 						{#each data?.clinics as clinic}
 							<option value={clinic.value}>{clinic.label}</option>
 						{/each}
 					</select>
 				</label>
 			</div>
-			<div class="flex flex-col gap-2">
-				<label for="patient_name">
-					<h1>Patient Name</h1>
-					<input type="text" name="patient_name" placeholder="Patient name" required />
-				</label>
-				<label for="description">
-					<h1>Description</h1>
-					<textarea class="h-20" name="description" placeholder="Description" required> </textarea>
-				</label>
-			</div>
 		</div>
-		<div class="flex flex-row justify-between gap-10">
-			<div class="flex flex-row items-center justify-between border px-10 py-5">
-				<label for="in-img">
-					<h1>IN</h1>
+		<div class="flex flex-col gap-4">
+			<label for="patient_name" class="mb-2 block text-sm font-bold text-gray-700">
+				Patient Name
+				<input
+					type="text"
+					name="patient_name"
+					placeholder="Patient name"
+					required
+					class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+				/>
+			</label>
+			<label for="description" class="mb-2 block text-sm font-bold text-gray-700">
+				Description
+				<textarea
+					class="focus:shadow-outline h-24 w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+					name="description"
+					placeholder="Description"
+					required
+				></textarea>
+			</label>
+		</div>
+		<div class="flex flex-row justify-between gap-8">
+			<div class="flex w-1/2 flex-col rounded-md border p-6">
+				<label for="in-img" class="mb-2 block text-sm font-bold text-gray-700">
+					IN Image
 					<input
-						class="w-30 border-2 px-2"
+						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
 						type="file"
 						name="in-img"
 						accept="image/*"
@@ -138,92 +162,87 @@
 						onchange={handleInImageChange}
 						required
 					/>
-					{#if show_in}
-						<img class="h-40 w-40" bind:this={in_img} alt="IN Preview" />
-					{/if}
-					<div class="flex flex-col gap-2">
-						<label for="date">
-							<h1>IN Date</h1>
-							<input type="date" name="date" placeholder="Date" required bind:value={date} />
-						</label>
-						<label for="time">
-							<h1>IN Time</h1>
-							<input type="time" name="time" placeholder="Time" required bind:value={time} />
-						</label>
-					</div>
 				</label>
-				<!-- <label for="out-img">
-					<h1>OUT</h1>
-					<input
-						class="w-30 border-2 px-2"
-						type="file"
-						name="out-img"
-						accept="image/*"
-						bind:this={out_file}
-						onchange={handleOutImageChange}
-						required
-					/>
-					{#if show_out}
-						<img class="h-40 w-40" bind:this={out_img} alt="OUT Preview" />
-					{/if}
-					<div class="flex flex-col gap-2">
-						<label for="date">
-							<h1>OUT Date</h1>
-							<input type="date" name="date" placeholder="Date" required bind:value={date} />
-						</label>
-						<label for="time">
-							<h1>OUT Time</h1>
-							<input type="time" name="time" placeholder="Time" required bind:value={time} />
-						</label>
+				{#if show_in}
+					<div class="mt-2">
+						<img
+							class="h-40 w-40 rounded-md object-cover shadow-sm"
+							bind:this={in_img}
+							alt="IN Preview"
+						/>
 					</div>
-				</label> -->
-			</div>
-			<div class="flex gap-10">
-				<div class="flex flex-col gap-2">
-					<label for="total_amount">
-						<h1>Total amount</h1>
+				{/if}
+				<div class="mt-4 flex flex-col gap-2">
+					<label for="date" class="mb-2 block text-sm font-bold text-gray-700">
+						IN Date
 						<input
-							type="number"
-							bind:value={total_amount}
-							name="total_amount"
-							placeholder="Total amount"
-							accept="number"
+							type="date"
+							name="date"
+							placeholder="Date"
 							required
+							bind:value={date}
+							class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
 						/>
 					</label>
-					<label for="paid_amount">
-						<h1>Paid amount</h1>
+					<label for="time" class="mb-2 block text-sm font-bold text-gray-700">
+						IN Time
 						<input
-							type="number"
-							bind:value={paid_amount}
-							name="paid_amount"
-							placeholder="Paid amount"
+							type="time"
+							name="time"
+							placeholder="Time"
 							required
-						/>
-					</label>
-					<label for="excess_payment">
-						<h1>Excess amount</h1>
-						<input
-							type="text"
-							value={paid_amount && total_amount ? paid_amount - total_amount : 0}
-							name="excess_payment"
-							placeholder="Remaining amount"
-							disabled
-						/>
-						<input
-							type="text"
-							value={paid_amount && total_amount ? paid_amount - total_amount : 0}
-							name="excess_payment"
-							placeholder="Remaining amount"
-							hidden
+							bind:value={time}
+							class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
 						/>
 					</label>
 				</div>
 			</div>
+			<div class="flex w-1/2 flex-col gap-4">
+				<label for="total_amount" class="mb-2 block text-sm font-bold text-gray-700">
+					Total amount
+					<input
+						type="number"
+						bind:value={total_amount}
+						name="total_amount"
+						placeholder="Total amount"
+						accept="number"
+						required
+						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+					/>
+				</label>
+				<label for="paid_amount" class="mb-2 block text-sm font-bold text-gray-700">
+					Paid amount
+					<input
+						type="number"
+						bind:value={paid_amount}
+						name="paid_amount"
+						placeholder="Paid amount"
+						required
+						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+					/>
+				</label>
+				<label for="excess_payment" class="mb-2 block text-sm font-bold text-gray-700">
+					Excess amount
+					<input
+						type="text"
+						value={paid_amount && total_amount ? paid_amount - total_amount : 0}
+						name="excess_payment"
+						placeholder="Excess amount"
+						disabled
+						class="focus:shadow-outline w-full cursor-not-allowed appearance-none rounded border bg-gray-100 px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+					/>
+					<input
+						type="hidden"
+						value={paid_amount && total_amount ? paid_amount - total_amount : 0}
+						name="excess_payment"
+					/>
+				</label>
+			</div>
 		</div>
-		<div class="align-center mt-2 flex justify-center">
-			<button class="rounded-md border-1 p-2 hover:cursor-pointer hover:bg-blue-500" type="submit"
-				>Add record</button
+		<div class="flex items-center justify-center">
+			<button
+				class="focus:shadow-outline rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700 focus:outline-none"
+				type="submit">Add Record</button
 			>
 		</div>
 	</form>

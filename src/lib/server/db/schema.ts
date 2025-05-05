@@ -47,6 +47,8 @@ export const records = pgTable("records", {
 	caseNo: serial("case_no"),
 	datePickup: date("date_pickup"),
 	timePickup: time("time_pickup"),
+	dateDropoff: date("date_dropoff"),
+	timeDropoff: time("time_dropoff"),
 	doctorName: varchar("doctor_name", { length: 255 }).notNull(),
 	clinicName: varchar("clinic_name", { length: 255 }).notNull(),
 	patientName: varchar("patient_name", { length: 255 }).notNull(),

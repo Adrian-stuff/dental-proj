@@ -6,7 +6,7 @@
 	let table = $state(data.data);
 
 	console.log(data.data);
-	let keys = [3, 7, 2, 8, 9, 10];
+	let keys = [3, 5, 7, 2, 9, 10];
 </script>
 
 <div id="printarea" class="flex flex-col">
@@ -30,7 +30,7 @@
 							.trim()}</th
 					>
 				{/each}
-				<th class="px-6 py-3"> PHOTO </th>
+				<th class="px-6 py-3 print:hidden"> HISTORY </th>
 			</tr>
 		</thead>
 		<tbody>
@@ -39,7 +39,7 @@
 					{#each keys as key}
 						<td class="px-6 py-4">{row[Object.keys(table[0])[key]]}</td>
 					{/each}
-					<td class="px-6 py-4">
+					<td class="px-6 py-4 print:hidden">
 						<a aria-label="history" href={`/history/${row[Object.keys(table[0])[2]]}`}>
 							LINK
 						</a></td
@@ -54,6 +54,9 @@
 	@media print {
 		#printarea {
 			display: block;
+		}
+		.print\:hidden {
+			display: none !important;
 		}
 	}
 </style>
