@@ -1,48 +1,135 @@
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { clinics, doctors, history, records } from '$lib/server/db/schema';
-import { desc } from 'drizzle-orm';
-import { convertFileToBytea } from '$lib';
-import { redirect } from '@sveltejs/kit';
+import { clinics, doctors } from '$lib/server/db/schema';
+import { desc, eq } from 'drizzle-orm';
 
-
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async () => {
   return {
-
-
-    doctors: (await db.select()
-      .from(doctors)
-      .orderBy(desc(doctors.doctorName))
-    ).map((doctor) => ({
+    doctors: (await db.select().from(doctors).orderBy(desc(doctors.doctorName))).map((doctor) => ({
       value: doctor.doctorName,
       label: doctor.doctorName,
       clinicId: doctor.clinicId
     })),
-
-    clinics: (await db.select()
-      .from(clinics)
-      .orderBy(desc(clinics.clinicName))
-    ).map((clinic) => ({
+    clinics: (await db.select().from(clinics).orderBy(desc(clinics.clinicName))).map((clinic) => ({
       value: clinic.clinicName,
       label: clinic.clinicName,
       clinicId: clinic.clinicId
-    })),
+    }))
   };
 };
 
 export const actions = {
-  default: async ({ cookies, request }) => {
+  addDoctor: async ({ request }) => {
     const data = await request.formData();
-    console.log('Form data:', data);
-    let caseNo
-    try {
+    const doctorName = data.get('doctor_name')?.toString();
+    const clinicId = data.get('clinic_id')?.toString();
 
-    } catch (error) {
-      console.error('Error inserting record:', error);
-      return { success: false, error: 'Failed to insert record' };
+    if (doctorName && clinicId) {
+      try {
+        await db.insert(doctors).values({
+          doctorName: doctorName,
+          clinicId: parseInt(clinicId)
+        } as unknown as typeof doctors.$inferInsert);
+        return { success: true, message: `Doctor "${doctorName}" added successfully to clinic ID ${clinicId}` };
+      } catch (error) {
+        console.error('Error inserting doctor:', error);
+        return { success: false, error: 'Failed to add doctor' };
+      }
+    } else {
+      return { success: false, error: 'Doctor name and clinic selection are required' };
     }
+  },
+  addClinic: async ({ request }) => {
+    const data = await request.formData();
+    const clinicName = data.get('clinic_name')?.toString();
 
+    if (clinicName) {
+      try {
+        const result = await db
+          .insert(clinics)
+          .values({ clinicName: clinicName } as unknown as typeof clinics.$inferInsert)
+          .returning({ clinicId: clinics.clinicId });
+        if (result && result.length > 0 && result[0].clinicId) {
+          return { success: true, message: `Clinic "${clinicName}" added successfully`, clinicId: result[0].clinicId };
+        } else {
+          return { success: false, error: 'Failed to add clinic and get ID' };
+        }
+      } catch (error) {
+        console.error('Error inserting clinic:', error);
+        return { success: false, error: 'Failed to add clinic' };
+      }
+    } else {
+      return { success: false, error: 'Clinic name is required' };
+    }
+  },
+  addClinicAndDoctor: async ({ request }) => {
+    const data = await request.formData();
+    const clinicName = data.get('clinic_name')?.toString();
+    const doctorName = data.get('doctor_name')?.toString();
 
+    if (clinicName && doctorName) {
+      try {
+        const clinicResult = await db
+          .insert(clinics)
+          .values({ clinicName: clinicName } as unknown as typeof clinics.$inferInsert)
+          .returning({ clinicId: clinics.clinicId });
 
+        if (clinicResult && clinicResult.length > 0 && clinicResult[0].clinicId) {
+          const newClinicId = clinicResult[0].clinicId;
+          await db.insert(doctors).values({
+            doctorName: doctorName,
+            clinicId: newClinicId
+          } as unknown as typeof doctors.$inferInsert);
+          return {
+            success: true,
+            message: `Clinic "${clinicName}" and doctor "${doctorName}" added successfully`
+          };
+        } else {
+          return { success: false, error: 'Failed to add clinic and get ID for doctor' };
+        }
+      } catch (error) {
+        console.error('Error inserting clinic and doctor:', error);
+        return { success: false, error: 'Failed to add clinic and doctor' };
+      }
+    } else {
+      return { success: false, error: 'Clinic name and doctor name are required' };
+    }
+  },
+  deleteDoctor: async ({ request }) => {
+    const data = await request.formData();
+    const doctorIdToDelete = data.get('doctor_id')?.toString();
+
+    if (doctorIdToDelete) {
+      try {
+        await db.delete(doctors).where(eq(doctors.clinicId, parseInt(doctorIdToDelete))); // Assuming doctor_id in the form corresponds to clinicId in doctors table based on previous code
+        return { success: true, message: `Doctor with ID ${doctorIdToDelete} deleted successfully` };
+      } catch (error) {
+        console.error('Error deleting doctor:', error);
+        return { success: false, error: 'Failed to delete doctor' };
+      }
+    } else {
+      return { success: false, error: 'Doctor ID not provided for deletion' };
+    }
+  },
+  deleteClinic: async ({ request }) => {
+    const data = await request.formData();
+    const clinicIdToDelete = data.get('clinic_id')?.toString();
+
+    if (clinicIdToDelete) {
+      try {
+        await db.transaction(async (tx) => {
+          // First, delete all doctors associated with this clinic
+          await tx.delete(doctors).where(eq(doctors.clinicId, parseInt(clinicIdToDelete)));
+          // Then, delete the clinic itself
+          await tx.delete(clinics).where(eq(clinics.clinicId, parseInt(clinicIdToDelete)));
+        });
+        return { success: true, message: `Clinic with ID ${clinicIdToDelete} and associated doctors deleted successfully` };
+      } catch (error) {
+        console.error('Error deleting clinic and associated doctors:', error);
+        return { success: false, error: 'Failed to delete clinic and associated doctors' };
+      }
+    } else {
+      return { success: false, error: 'Clinic ID not provided for deletion' };
+    }
   }
 } satisfies Actions;

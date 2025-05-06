@@ -19,63 +19,131 @@
 	let newClinicId: number | null = $state(null);
 	let newClinicSearch = $state('');
 	let filteredClinics: typeof clinics = $state([]);
-	let isClinicInputFocused = $state(false); // Add a state to track focus
+	let isClinicInputFocused = $state(false);
+	let isNewClinic = $state(false);
+
+	let success = form?.success ?? false;
+	let message = form?.message ?? '';
 
 	$effect(() => {
 		if (isClinicInputFocused && !newClinicSearch) {
-			filteredClinics = clinics; // Show all clinics on focus if no search term
+			filteredClinics = clinics;
 		} else if (newClinicSearch) {
 			filteredClinics = clinics.filter((clinic) =>
 				clinic.label.toLowerCase().includes(newClinicSearch.toLowerCase())
 			);
 		} else {
-			filteredClinics = []; // Hide the dropdown by default
+			filteredClinics = [];
 		}
 	});
 
 	function handleAddDoctor() {
-		if (newDoctorName && newClinicId) {
-			// In a real application, you would send this data to your backend
-			console.log('Adding doctor:', newDoctorName, 'to clinic ID:', newClinicId);
-			// Reset the form
-			newDoctorName = '';
-			newClinicId = null;
-			newClinicSearch = '';
-			isClinicInputFocused = false; // Reset focus state
+		if (newDoctorName && (newClinicId || (isNewClinic && newClinicSearch))) {
+			console.log(
+				'Adding doctor:',
+				newDoctorName,
+				'to clinic ID:',
+				newClinicId,
+				'new clinic:',
+				newClinicSearch
+			);
+			// Form submission will handle the actual add logic
 		} else {
-			alert('Please enter a doctor name and select a clinic.');
+			alert('Please enter a doctor name and select or enter a clinic.');
 		}
 	}
 
 	function selectClinic(clinic: (typeof clinics)[0]) {
 		newClinicId = clinic.clinicId;
 		newClinicSearch = clinic.label;
-		filteredClinics = []; // Hide the dropdown after selection
-		isClinicInputFocused = false; // Reset focus state
+		filteredClinics = [];
+		isClinicInputFocused = false;
+		isNewClinic = false;
 	}
 
 	function handleClinicInputFocus() {
 		isClinicInputFocused = true;
+		isNewClinic = false; // Reset new clinic flag when focus
 	}
 
 	function handleClinicInputBlur() {
-		// Add a small delay to allow click on dropdown items
 		setTimeout(() => {
 			isClinicInputFocused = false;
+			// If the input has text but no clinic is selected, assume it's a new clinic
+			if (newClinicSearch && !newClinicId) {
+				isNewClinic = true;
+			} else if (!newClinicSearch) {
+				isNewClinic = false;
+			}
 		}, 100);
+	}
+
+	function handleNewClinicInput() {
+		newClinicId = null; // Clear selected clinic if user types
+		isNewClinic = true;
 	}
 </script>
 
 <div>
 	<div class="flex flex-col items-center justify-center overflow-x-auto">
-		<table class="mt-10 w-lg divide-y divide-gray-200 rounded-md shadow-md">
+		{#if success && message}
+			<div class="mb-4 rounded-md bg-green-100 p-4">
+				<div class="flex">
+					<div class="flex-shrink-0">
+						<svg
+							class="h-5 w-5 text-green-400"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							aria-hidden="true"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 00-1.414-1.414z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<div class="ml-3">
+						<p class="text-sm font-medium text-green-800">{message}</p>
+					</div>
+				</div>
+			</div>
+		{:else if form?.error}
+			<div class="mb-4 rounded-md bg-red-100 p-4">
+				<div class="flex">
+					<div class="flex-shrink-0">
+						<svg
+							class="h-5 w-5 text-red-400"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							aria-hidden="true"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586l-1.293-1.293z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<div class="ml-3">
+						<h3 class="text-sm font-medium text-red-800">There was an error:</h3>
+						<div class="mt-2 text-sm text-red-700">
+							<p>{form.error}</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<h2 class="mt-10 text-xl font-semibold text-gray-900">Doctors</h2>
+		<table class="mt-4 w-lg divide-y divide-gray-200 rounded-md shadow-md">
 			<thead class="bg-gray-50">
 				<tr>
 					<th
 						scope="col"
 						class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 					>
-						Doctor
+						Doctor Name
 					</th>
 					<th
 						scope="col"
@@ -84,7 +152,7 @@
 						Clinic
 					</th>
 					<th scope="col" class="relative px-6 py-3">
-						<span class="sr-only">Edit</span>
+						<span class="sr-only">Delete</span>
 					</th>
 				</tr>
 			</thead>
@@ -96,31 +164,75 @@
 						</td>
 						<td class="px-6 py-2 text-sm whitespace-nowrap text-gray-500">{doctor.clinicName}</td>
 						<td class="px-6 py-2 text-right text-sm font-medium whitespace-nowrap">
-							<button
-								type="button"
-								class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
-							>
-								Edit
-							</button>
+							<form action="?/deleteDoctor" method="post">
+								<input type="hidden" name="doctor_id" value={doctor.clinicId} />
+								<button
+									type="submit"
+									class="inline-flex items-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none"
+								>
+									Delete Doctor
+								</button>
+							</form>
 						</td>
 					</tr>
 				{/each}
 			</tbody>
 		</table>
-		<form method="POST" class="mt-8 w-lg space-y-4">
+
+		<h2 class="mt-10 text-xl font-semibold text-gray-900">Clinics</h2>
+		<table class="mt-4 w-lg divide-y divide-gray-200 rounded-md shadow-md">
+			<thead class="bg-gray-50">
+				<tr>
+					<th
+						scope="col"
+						class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+					>
+						Clinic Name
+					</th>
+					<th scope="col" class="relative px-6 py-3">
+						<span class="sr-only">Delete</span>
+					</th>
+				</tr>
+			</thead>
+			<tbody class="divide-y divide-gray-200 bg-white">
+				{#each clinics as clinic}
+					<tr>
+						<td class="px-6 py-2 text-sm font-medium whitespace-nowrap text-gray-900">
+							{clinic.label}
+						</td>
+						<td class="px-6 py-2 text-right text-sm font-medium whitespace-nowrap">
+							<form action="?/deleteClinic" method="post">
+								<input type="hidden" name="clinic_id" value={clinic.clinicId} />
+								<button
+									type="submit"
+									class="inline-flex items-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none"
+								>
+									Delete Clinic
+								</button>
+							</form>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+
+		<form
+			method="POST"
+			action="?/{isNewClinic ? 'addClinicAndDoctor' : 'addDoctor'}"
+			class="mt-8 w-lg space-y-4"
+		>
 			<div>
-				<label for="newClinicSearch" class="block text-sm font-medium text-gray-700">
-					Clinic
-				</label>
+				<label for="clinic_name" class="block text-sm font-medium text-gray-700"> Clinic </label>
 				<div class="relative mt-1">
 					<input
 						type="text"
-						id="newClinicSearch"
+						name="clinic_name"
 						bind:value={newClinicSearch}
 						class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-						placeholder="Search for a clinic"
+						placeholder="Search for a clinic or enter a new one"
 						onfocus={handleClinicInputFocus}
 						onblur={handleClinicInputBlur}
+						oninput={handleNewClinicInput}
 						required
 					/>
 					{#if (isClinicInputFocused || newClinicSearch) && filteredClinics.length > 0}
@@ -142,16 +254,17 @@
 					<p class="mt-1 text-sm text-gray-500">
 						Selected Clinic: {clinics.find((c) => c.clinicId === newClinicId)?.label}
 					</p>
+					<input type="hidden" name="clinic_id" value={newClinicId} />
 				{/if}
 			</div>
 			<div>
-				<label for="newDoctorName" class="block text-sm font-medium text-gray-700">
+				<label for="doctor_name" class="block text-sm font-medium text-gray-700">
 					Doctor Name
 				</label>
 				<div class="mt-1">
 					<input
 						type="text"
-						id="newDoctorName"
+						name="doctor_name"
 						bind:value={newDoctorName}
 						class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 						placeholder="Enter doctor's name"
@@ -161,11 +274,11 @@
 			</div>
 			<div>
 				<button
-					type="button"
+					type="submit"
 					class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
 					onclick={handleAddDoctor}
 				>
-					Add Doctor
+					Add
 				</button>
 			</div>
 		</form>
