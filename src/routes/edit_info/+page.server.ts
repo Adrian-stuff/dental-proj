@@ -1,4 +1,4 @@
-import type { Actions, PageServerLoad } from '../../$types';
+import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { clinics, doctors, history, records } from '$lib/server/db/schema';
 import { desc } from 'drizzle-orm';
@@ -7,10 +7,26 @@ import { redirect } from '@sveltejs/kit';
 
 
 export const load: PageServerLoad = async ({ params }) => {
-  const caseNo = params.caseNo.toString();
-
   return {
-    caseNo,
+
+
+    doctors: (await db.select()
+      .from(doctors)
+      .orderBy(desc(doctors.doctorName))
+    ).map((doctor) => ({
+      value: doctor.doctorName,
+      label: doctor.doctorName,
+      clinicId: doctor.clinicId
+    })),
+
+    clinics: (await db.select()
+      .from(clinics)
+      .orderBy(desc(clinics.clinicName))
+    ).map((clinic) => ({
+      value: clinic.clinicName,
+      label: clinic.clinicName,
+      clinicId: clinic.clinicId
+    })),
   };
 };
 
@@ -18,20 +34,15 @@ export const actions = {
   default: async ({ cookies, request }) => {
     const data = await request.formData();
     console.log('Form data:', data);
-
+    let caseNo
     try {
-      await db.insert(history).values({
-        historyType: "in",
-        recordId: data.get('case_no')?.toString(),
-        imageData: await convertFileToBytea(data.get('in-img') as File),
-        historyDate: data.get("date"),
-        historyTime: data.get("time"),
-      } as unknown as typeof history.$inferInsert);
+
     } catch (error) {
       console.error('Error inserting record:', error);
       return { success: false, error: 'Failed to insert record' };
     }
 
-    redirect(303, `/history/${data.get('case_no')?.toString()}`); // Redirect to the desired page after successful insertion
+
+
   }
 } satisfies Actions;

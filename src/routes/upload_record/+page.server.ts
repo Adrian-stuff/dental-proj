@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { clinics, doctors, history, records } from '$lib/server/db/schema';
 import { desc } from 'drizzle-orm';
 import { convertFileToBytea } from '$lib';
+import { redirect } from '@sveltejs/kit';
 
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -29,7 +30,8 @@ export const load: PageServerLoad = async ({ params }) => {
       .orderBy(desc(doctors.doctorName))
     ).map((doctor) => ({
       value: doctor.doctorName,
-      label: doctor.doctorName
+      label: doctor.doctorName,
+      clinicId: doctor.clinicId
     })),
 
     clinics: (await db.select()
@@ -37,7 +39,8 @@ export const load: PageServerLoad = async ({ params }) => {
       .orderBy(desc(clinics.clinicName))
     ).map((clinic) => ({
       value: clinic.clinicName,
-      label: clinic.clinicName
+      label: clinic.clinicName,
+      clinicId: clinic.clinicId
     })),
   };
 };
@@ -46,7 +49,12 @@ export const actions = {
   default: async ({ cookies, request }) => {
     const data = await request.formData();
     console.log('Form data:', data);
+    let caseNo
     try {
+      caseNo = (await db.select()
+        .from(records)
+        .orderBy(desc(records.caseNo)) // Replace 'id' with your primary key or a suitable ordering column
+        .limit(1))[0]?.caseNo + 1;
       await db.insert(records).values({
         caseType: data.get('case_type'),
         datePickup: data.get('date'),
@@ -64,10 +72,7 @@ export const actions = {
         historyType: "in",
         imageData: await convertFileToBytea(data.get('in-img') as File),
         historyDate: data.get('date'),
-        recordId: (await db.select()
-          .from(records)
-          .orderBy(desc(records.caseNo)) // Replace 'id' with your primary key or a suitable ordering column
-          .limit(1))[0]?.caseNo,
+        recordId: caseNo,
         historyTime: data.get('time')
       } as unknown as typeof history.$inferInsert);
 
@@ -81,11 +86,12 @@ export const actions = {
       //     .limit(1))[0]?.caseNo,
       //   historyTime: data.get('time')
       // } as unknown as typeof history.$inferInsert);
-
+      // return { success: true, message: 'Record inserted successfully' };
     } catch (error) {
       console.error('Error inserting record:', error);
       return { success: false, error: 'Failed to insert record' };
     }
+    redirect(303, "/?case_no=" + caseNo);
 
 
   }

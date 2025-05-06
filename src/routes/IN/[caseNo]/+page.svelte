@@ -36,13 +36,13 @@
 	});
 </script>
 
-<div class="flex flex-col items-center justify-center rounded-md bg-gray-100 p-8 shadow-md">
-	<h1 class="mb-4 text-2xl font-semibold">Case No: {data.caseNo}</h1>
+<div class="flex flex-col items-center justify-center rounded-md bg-white p-8">
+	<h1 class="mb-4 text-2xl font-semibold">IN Case No: {data.caseNo}</h1>
 
 	<form
 		method="POST"
 		enctype="multipart/form-data"
-		class="flex w-full max-w-md flex-row items-start justify-center space-x-6 rounded border border-gray-300 bg-white px-8 py-6"
+		class="flex w-full max-w-md flex-row items-start justify-center space-x-6 rounded border border-gray-300 bg-green-200 px-8 py-6"
 	>
 		<input type="text" name="case_no" value={data.caseNo} hidden />
 		<label for="in-img" class="flex flex-col gap-3">
