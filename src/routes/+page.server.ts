@@ -1,10 +1,11 @@
 import { db } from '$lib/server/db';
-import { clinics, doctors, records } from '$lib/server/db/schema';
+import { caseTypes, clinics, doctors, records } from '$lib/server/db/schema';
 import { desc, sql } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, url }) => {
   const caseNo = url.searchParams.get('case_no')?.toString();
+  const caseType = url.searchParams.get('case_type')?.toString();
   const clinicName = url.searchParams.get('clinic_name')?.toString();
   let doctorData = (await db.select().from(doctors).orderBy(desc(doctors.doctorName))).map(
     (doctor) => ({
@@ -19,47 +20,76 @@ export const load: PageServerLoad = async ({ params, url }) => {
       label: clinic.clinicName
     })
   );
+  let caseTypeData = (await db.select().from(caseTypes));
 
-  if (caseNo) {
-    let recordData = await db
-      .select()
-      .from(records)
-      .where(sql`case_no = ${caseNo}`)
-      .orderBy(desc(records.recordId));
-    return {
-      data: recordData,
-      clinicName: recordData[0]?.clinicName,
-      caseNo: caseNo,
-      doctors: doctorData,
-      clinics: clinicData,
-      hasQuery: true
-    };
-  } else if (clinicName) {
-    let recordData = await db
-      .select()
-      .from(records)
-      .where(sql`clinic_name = ${clinicName}`)
-      .orderBy(desc(records.recordId));
-    return {
-      data: recordData,
-      clinicName: clinicName,
-      caseNo: null,
-      doctors: doctorData,
-      clinics: clinicData,
-      hasQuery: true
+  try {
+    if (caseNo && caseType) {
+      let recordData = await db
+        .select()
+        .from(records)
+        .where(sql`case_no = ${caseNo} AND case_type = ${caseType}`)
+        .orderBy(desc(records.recordId));
+      return {
+        data: recordData.length <= 0 ? [] : recordData,
+        clinicName: recordData[0]?.clinicName,
+        caseTypes: caseTypeData,
+        caseNo: caseNo,
+        caseType: caseType,
+        doctors: doctorData,
+        clinics: clinicData,
+        hasQuery: true
+      };
+    } else if (!caseNo && caseType) {
+      let recordData = await db
+        .select()
+        .from(records)
+        .where(sql`case_type = ${caseType}`)
+        .orderBy(desc(records.recordId));
+      return {
+        data: recordData.length <= 0 ? [] : recordData,
+        clinicName: recordData[0]?.clinicName,
+        caseTypes: caseTypeData,
+        caseNo: null,
+        caseType: caseType,
+        doctors: doctorData,
+        clinics: clinicData,
+        hasQuery: true
+      };
+    }
+    else if (clinicName) {
+      let recordData = await db
+        .select()
+        .from(records)
+        .where(sql`clinic_name = ${clinicName}`)
+        .orderBy(desc(records.recordId));
+      return {
+        data: recordData.length <= 0 ? [] : recordData,
+        clinicName: clinicName,
+        caseTypes: caseTypeData,
+        caseType: null,
+        caseNo: null,
+        doctors: doctorData,
+        clinics: clinicData,
+        hasQuery: true
 
-    };
-  } else {
-    let recordData = await db.select().from(records).orderBy(desc(records.recordId));
-    return {
-      data: recordData,
-      clinicName: null,
-      caseNo: null,
-      doctors: doctorData,
-      clinics: clinicData,
-      hasQuery: false
+      };
+    } else {
+      let recordData = await db.select().from(records).orderBy(desc(records.recordId));
+      return {
+        data: recordData.length <= 0 ? [] : recordData,
+        clinicName: null,
+        caseTypes: caseTypeData,
+        caseType: null,
+        caseNo: null,
+        doctors: doctorData,
+        clinics: clinicData,
+        hasQuery: false
 
-    };
+      };
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    return { success: false, error: 'Failed to fetch record data' };
   }
 };
 
@@ -69,11 +99,21 @@ export const actions: Actions = {
 
 
     const caseNo = data.get('case_no')?.toString();
-    let recordData = await db
-      .select()
-      .from(records)
-      .where(sql`case_no = ${caseNo}`);
-    return { success: true, data: recordData, clinicName: recordData[0]?.clinicName };
+    const caseType = data.get('case_type')?.toString();
+
+    if (!caseNo && caseType) {
+      let recordData = await db
+        .select()
+        .from(records)
+        .where(sql`case_type = ${caseType}`);
+      return { success: true, data: recordData, clinicName: null };
+    } else if (caseNo && caseType) {
+      let recordData = await db
+        .select()
+        .from(records)
+        .where(sql`case_no = ${caseNo} AND case_type = ${caseType}`);
+      return { success: true, data: recordData, clinicName: recordData[0]?.clinicName };
+    }
   },
   clinics: async ({ request }) => {
     const data = await request.formData();

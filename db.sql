@@ -3,7 +3,14 @@ DROP TABLE IF EXISTS history CASCADE; -- Drop history first, as it depends on re
 DROP TABLE IF EXISTS records CASCADE; -- Drop records next, as both history and other tables depend on it.
 DROP TABLE IF EXISTS doctors CASCADE; -- Drop doctors, which depends on clinics
 DROP TABLE IF EXISTS clinics CASCADE; -- Drop clinics last, as it is depended on by doctors.
+DROP TABLE IF EXISTS case_types CASCADE; -- Drop clinics last, as it is depended on by doctors.
 
+-- Table for Case Type
+CREATE TABLE case_types (
+    case_type_id SERIAL PRIMARY KEY,
+    case_type_name VARCHAR(255) NOT NULL UNIQUE,
+    number_of_cases INTEGER NOT NULL
+);
 
 -- Table for Clinics
 CREATE TABLE clinics (
@@ -22,7 +29,7 @@ CREATE TABLE doctors (
 CREATE TABLE records (
     record_id SERIAL PRIMARY KEY,
     case_type TEXT,
-    case_no SERIAL,
+    case_no INTEGER,
     date_pickup DATE,
 	time_pickup TIME WITH TIME ZONE,
 	date_dropoff DATE,
@@ -31,6 +38,7 @@ CREATE TABLE records (
     clinic_name VARCHAR(255) NOT NULL,
     patient_name VARCHAR(255) NOT NULL,
     description TEXT,
+	remarks TEXT,
     total_amount DECIMAL(10, 2),
     paid_amount DECIMAL(10, 2),
     excess_payment DECIMAL(10, 2),
@@ -66,12 +74,39 @@ VALUES
     ('Dr. Ben Cruz', (SELECT clinic_id FROM clinics WHERE clinic_name = 'St. Jude Clinic')),
     ('Dr. Carla Diaz', (SELECT clinic_id FROM clinics WHERE clinic_name = 'Metro Medical Center'));
 
--- Modified INSERT INTO records to use clinic and doctor names directly.
-INSERT INTO records (case_type, date_pickup, doctor_name, clinic_name, patient_name, total_amount, paid_amount)
+-- -- Modified INSERT INTO records to use clinic and doctor names directly.
+-- INSERT INTO records (case_type, date_pickup, doctor_name, clinic_name, patient_name, total_amount, paid_amount)
+-- VALUES
+--     ('OR', '2025-05-04', 'Dr. Ana Reyes', 'St. Jude Clinic', 'Juan Dela Cruz', 1500.00, 1500.00),
+--     ('BJ', '2025-05-10', 'Dr. Ben Cruz', 'St. Jude Clinic', 'Maria Santos', 800.00, 1000.00),
+--     ('IVO', '2025-05-15', 'Dr. Carla Diaz', 'Metro Medical Center', 'Ricardo Gomez', 1200.00, 1000.00);
+
+
+--      { value: 'OR', label: 'OR' },
+    --   { value: 'F', label: 'F' },
+    --   { value: 'TH', label: 'TH' },
+    --   { value: 'IVO', label: 'IVO' },
+    --   { value: 'R', label: 'R' },
+    --   { value: 'P', label: 'P' },
+    --   { value: 'TIL', label: 'TIL' },
+    --   { value: 'Z', label: 'Z' },
+    --   { value: 'TC', label: 'TC' },
+    --   { value: 'R', label: 'R' },
+    --   { value: 'BJ', label: 'BJ' },
+-- Inserting into case_types table
+INSERT INTO case_types (case_type_name, number_of_cases)
 VALUES
-    ('Consultation', '2025-05-04', 'Dr. Ana Reyes', 'St. Jude Clinic', 'Juan Dela Cruz', 1500.00, 1500.00),
-    ('Follow-up', '2025-05-10', 'Dr. Ben Cruz', 'St. Jude Clinic', 'Maria Santos', 800.00, 1000.00),
-    ('Check-up', '2025-05-15', 'Dr. Carla Diaz', 'Metro Medical Center', 'Ricardo Gomez', 1200.00, 1000.00);
+    ('OR', 0),
+    ('F', 0),
+    ('TH', 0),
+    ('IVO', 0),
+    ('R', 0),
+    ('P', 0),
+    ('TIL', 0),
+    ('Z', 0),
+    ('TC', 0),
+    ('BJ', 0);
+
 
 -- Updating excess payment based on paid and total amount
 UPDATE records

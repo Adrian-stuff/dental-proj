@@ -12,7 +12,7 @@
 			error = true;
 		}
 	}
-
+	console.log(data.data);
 	let selectedClinic = $state<string | null>(
 		form != undefined && form.success ? form.clinicName : data.clinicName || ''
 	);
@@ -77,7 +77,7 @@
 		}
 	}
 
-	let displayedKeys = [3, 5, 9, 2, 10, 11, 12];
+	let displayedKeys = [3, 5, 9, 2, 10, 11, 12, 15];
 </script>
 
 <div class="flex flex-col">
@@ -122,6 +122,20 @@
 			</button>
 		</form>
 		<form method="POST" action="?/caseNo" class="flex items-center gap-2">
+			<label for="case_type" class="flex flex-col items-start gap-1">
+				<h1 class="text-sm font-semibold text-gray-700">Case Type</h1>
+				<select
+					name="case_type"
+					class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+					required
+				>
+					{#each data.caseTypes as caseType}
+						<option value={caseType.caseType} selected={caseType.caseType === data.caseType}>
+							{caseType.caseType}
+						</option>
+					{/each}
+				</select>
+			</label>
 			<label for="case_no" class="flex flex-col items-start gap-1">
 				<h1 class="text-sm font-semibold text-gray-700">Case No</h1>
 				<input
@@ -130,7 +144,6 @@
 					defaultValue={data.caseNo || ''}
 					placeholder="Enter Case No"
 					class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-					required
 				/>
 			</label>
 			<button
@@ -140,6 +153,7 @@
 				QUERY
 			</button>
 		</form>
+
 		<form method="POST" action="?/date" class="flex items-center gap-2">
 			<label for="start_date" class="flex flex-col items-start gap-1">
 				<h1 class="text-sm font-semibold text-gray-700">Start Date</h1>
@@ -193,7 +207,7 @@
 				</div>
 			</div>
 		{/if}
-		{#if !error}
+		{#if !error && data.data.length > 0}
 			<table
 				class="mx-5 mt-2 w-[97%] border-collapse text-left text-sm text-gray-500 rtl:text-right"
 			>
@@ -228,13 +242,16 @@
 									{#if keyIndex === 11 || keyIndex === 12}
 										<span>&#8369;</span>
 									{/if}
+									{#if keyIndex === 2}
+										<span>{row[Object.keys(table[0])[1]]} -</span>
+									{/if}
 									{row[Object.keys(table[0])[keyIndex]]}
 								</td>
 							{/each}
 							<td class="border border-gray-300 px-6 py-4 print:hidden">
 								<a
 									aria-label="history"
-									href={`/history/${row[Object.keys(table[0])[2]]}`}
+									href={`/history/${row[Object.keys(table[0])[0]]}`}
 									class="text-blue-500 no-underline hover:underline"
 								>
 									LINK
@@ -270,7 +287,7 @@
 				</tbody>
 			</table>
 		{/if}
-		{#if error}
+		{#if error || data.data.length === 0}
 			<div class="flex h-screen items-center justify-center">
 				<h1 class="text-2xl font-semibold text-red-500">No Data Found</h1>
 			</div>

@@ -34,7 +34,7 @@ export const actions = {
       console.error('Error inserting record:', error);
       return { success: false, error: 'Failed to insert record' };
     }
-    redirect(303, `/?case_no=${caseNo}`);
+    redirect(303, `/?case_no=${caseNo}&case_type=${data.get("case_type")}`);
 
   }
 } satisfies Actions;

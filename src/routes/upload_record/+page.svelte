@@ -118,7 +118,7 @@
 						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
 					>
 						{#each data?.caseTypes as caseType}
-							<option value={caseType.value}>{caseType.label}</option>
+							<option value={caseType.caseType}>{caseType.caseType}</option>
 						{/each}
 					</select>
 				</label>
@@ -129,7 +129,8 @@
 						name="case_number"
 						class="block w-full cursor-not-allowed appearance-none rounded-md border border-dashed border-gray-300 bg-gray-100 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
 						placeholder="Case number"
-						value={data?.caseNo}
+						value={data?.caseTypes.find((caseType) => caseType.caseType === case_type)
+							?.numberOfCases + 1}
 						disabled
 					/>
 				</label>
@@ -142,6 +143,7 @@
 							type="text"
 							id="clinic_name"
 							name="clinic_name"
+							autocomplete="off"
 							bind:value={clinicInputValue}
 							oninput={filterClinics}
 							onfocus={() => {
@@ -209,6 +211,7 @@
 							type="text"
 							id="doctor_name"
 							name="doctor_name"
+							autocomplete="off"
 							bind:value={doctorInputValue}
 							oninput={filterDoctors}
 							onfocus={() => (showDoctorDropdown = selectedClinic != null)}
@@ -278,6 +281,7 @@
 					type="text"
 					name="patient_name"
 					placeholder="Patient name"
+					autocomplete="off"
 					required
 					class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
 				/>
@@ -353,6 +357,7 @@
 						placeholder="Total amount"
 						accept="number"
 						required
+						autocomplete="off"
 						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
 					/>
 				</label>
@@ -363,6 +368,7 @@
 						bind:value={paid_amount}
 						name="paid_amount"
 						placeholder="Paid amount"
+						autocomplete="off"
 						required
 						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
 					/>

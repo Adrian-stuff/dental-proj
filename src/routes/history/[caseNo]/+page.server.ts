@@ -10,9 +10,9 @@ export const load: PageServerLoad = async ({ params }) => {
   let data = [];
   let recordData = [];
   try {
+    recordData = await db.select().from(records).where(sql`record_id = ${caseNo}`).orderBy(desc(records.recordId)).limit(1)
 
     data = await db.select().from(history).where(sql`record_id = ${caseNo}`).orderBy(desc(history.historyId))
-    recordData = await db.select().from(records).where(sql`case_no = ${caseNo}`).orderBy(desc(records.recordId)).limit(1)
     console.log(recordData)
   } catch (error) {
     console.error('Error:', error);
