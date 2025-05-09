@@ -20,6 +20,7 @@
 	let endDate: string | null = $state(form != undefined && form.success ? form.end_date : null);
 	let searchClinic = $state(data.clinicName || '');
 	let isDropdownOpen = $state(false);
+	let isDeleting = $state(false);
 	let filteredClinics = $derived(
 		data?.clinics?.filter((clinic) =>
 			clinic.label.toLowerCase().includes(searchClinic.toLowerCase())
@@ -82,7 +83,7 @@
 
 <div class="flex flex-col">
 	<div class="m-2 flex flex-wrap items-center gap-4 print:hidden">
-		<form method="POST" action="?/clinics" class="flex items-center gap-2">
+		<form method="POST" action="?/caseNo" class="flex items-center gap-2">
 			<label for="clinic_name" class="relative flex flex-col items-start gap-1">
 				<h1 class="text-sm font-semibold text-gray-700">Clinic</h1>
 				<input
@@ -113,15 +114,6 @@
 					<input type="hidden" name="clinic_name" value={selectedClinic} required />
 				{/if}
 			</label>
-			<button
-				class="self-end rounded border border-gray-300 bg-blue-500 p-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-400 sm:text-sm"
-				type="submit"
-				disabled={!selectedClinic}
-			>
-				QUERY
-			</button>
-		</form>
-		<form method="POST" action="?/caseNo" class="flex items-center gap-2">
 			<label for="case_type" class="flex flex-col items-start gap-1">
 				<h1 class="text-sm font-semibold text-gray-700">Case Type</h1>
 				<select
@@ -146,15 +138,26 @@
 					class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 				/>
 			</label>
-			<button
-				class="self-end rounded border border-gray-300 bg-blue-500 p-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
-				type="submit"
-			>
-				QUERY
-			</button>
-		</form>
-
-		<form method="POST" action="?/date" class="flex items-center gap-2">
+			<label for="remark" class="flex flex-col items-start gap-1">
+				<h1 class="text-sm font-semibold text-gray-700">Remark</h1>
+				<select
+					name="remark"
+					class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+					required
+				>
+					{#each ['finished', 'pending'] as remark}
+						{#if form?.success}
+							<option value={remark} selected={remark === form.remark}>
+								{remark}
+							</option>
+						{:else}
+							<option value={remark}>
+								{remark}
+							</option>
+						{/if}
+					{/each}
+				</select>
+			</label>
 			<label for="start_date" class="flex flex-col items-start gap-1">
 				<h1 class="text-sm font-semibold text-gray-700">Start Date</h1>
 				<input
@@ -176,6 +179,13 @@
 				/>
 			</label>
 			<button
+				class="self-end rounded border border-gray-300 bg-blue-500 p-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-400 sm:text-sm"
+				type="submit"
+				disabled={!selectedClinic}
+			>
+				QUERY
+			</button>
+			<button
 				class="self-end rounded border border-gray-300 bg-green-500 p-2 text-white shadow-sm hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
 				type="submit"
 			>
@@ -192,6 +202,15 @@
 				RESET
 			</button>
 		</form>
+		<div class="flex flex-col items-center gap-2">
+			<h1 class="text-sm font-medium">Delete mode:</h1>
+			<label class="relative inline-flex cursor-pointer items-center">
+				<input type="checkbox" bind:checked={isDeleting} class="peer sr-only" />
+				<div
+					class="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 peer-focus:outline-none after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white rtl:peer-checked:after:-translate-x-full dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-blue-800"
+				></div>
+			</label>
+		</div>
 	</div>
 
 	<div id="printarea" class="flex flex-col">
@@ -232,6 +251,13 @@
 						<th class="border border-gray-300 px-6 py-3 font-semibold text-gray-700 print:hidden">
 							ACTIONS
 						</th>
+						{#if isDeleting}
+							<th
+								class="border border-gray-300 bg-red-300 px-6 py-3 font-semibold text-gray-700 print:hidden"
+							>
+								DELETE
+							</th>
+						{/if}
 					</tr>
 				</thead>
 				<tbody class="bg-white">
@@ -282,6 +308,27 @@
 									AMOUNT
 								</a>
 							</td>
+							{#if isDeleting}
+								<td
+									class="justify-between border border-gray-300 px-6 py-4 text-center print:hidden"
+								>
+									<form action="?/deleteCase" method="post">
+										<button
+											type="submit"
+											aria-label="in"
+											class=" inline-block rounded bg-red-300 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-blue-700"
+										>
+											DELETE
+										</button>
+										<input
+											type="text"
+											value={row[Object.keys(table[0])[2]]}
+											name="case_delete"
+											hidden
+										/>
+									</form>
+								</td>
+							{/if}
 						</tr>
 					{/each}
 				</tbody>
