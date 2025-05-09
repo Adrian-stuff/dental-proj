@@ -6,10 +6,14 @@
 	let historyItems: any[] = $state(data.data);
 	let sortAscending = $state(false);
 
-	function bufferToImageUrlViaBlob(buffer: Buffer): string {
+	function bufferToImageUrlViaBase64(buffer: Buffer): string {
 		const uint8Array = new Uint8Array(buffer);
-		const blob = new Blob([uint8Array], { type: 'image/png' });
-		return URL.createObjectURL(blob);
+		let binaryString = '';
+		uint8Array.forEach((byte) => {
+			binaryString += String.fromCharCode(byte);
+		});
+		const base64String = btoa(binaryString);
+		return `data:image/png;base64,${base64String}`;
 	}
 
 	function formatTimeToStandard(timeWithOffset: string): string {
@@ -53,14 +57,6 @@
 
 	onMount(() => {
 		console.log(data.recordData);
-		return () => {
-			historyItems.forEach((item) => {
-				if (item.imageData) {
-					const imageUrl = bufferToImageUrlViaBlob(item.imageData);
-					URL.revokeObjectURL(imageUrl);
-				}
-			});
-		};
 	});
 </script>
 
@@ -73,15 +69,13 @@
 			<h2 class="text-lg text-gray-700">
 				CLINIC: <span class="font-medium text-green-600">{data.recordData[0].clinicName}</span>
 			</h2>
-		</div>
-		<button
+		</div><button
 			class="mt-4 rounded-md bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 focus:outline-none"
 			onclick={toggleSort}
 		>
 			Sort by Date ({sortAscending ? 'Oldest First' : 'Newest First'})
 		</button>
 	</div>
-
 	<div class="flex flex-col items-center justify-center space-y-4 p-6">
 		{#each historyItems as item}
 			<div
@@ -110,7 +104,7 @@
 						{#if item.imageData}
 							<div class="mt-2 overflow-hidden rounded-md border border-gray-300">
 								<img
-									src={bufferToImageUrlViaBlob(item.imageData)}
+									src={bufferToImageUrlViaBase64(item.imageData)}
 									alt="History"
 									class="block w-lg object-cover"
 								/>

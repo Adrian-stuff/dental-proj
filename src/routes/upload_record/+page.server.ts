@@ -52,7 +52,8 @@ export const actions = {
           description: data.get('description'),
           totalAmount: data.get('total_amount'),
           paidAmount: data.get('paid_amount'),
-          excessPayment: data.get('excess_payment')
+          excessPayment: data.get('excess_payment'),
+          remarks: "pending"
         } as typeof records.$inferInsert)
         .returning({ id: records.recordId }); // Assuming 'recordId' is the name of your auto-incrementing primary key
 

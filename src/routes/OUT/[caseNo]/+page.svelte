@@ -42,58 +42,66 @@
 	<form
 		method="POST"
 		enctype="multipart/form-data"
-		class="flex w-full max-w-md flex-row items-start justify-center space-x-6 rounded border border-gray-300 bg-red-100 px-8 py-6"
+		class="flex w-full max-w-md flex-col items-start justify-center space-y-6 rounded border border-gray-300 bg-red-100 px-8 py-6"
 	>
 		<input type="text" name="case_no" value={data.caseNo} hidden />
-		<label for="in-img" class="flex flex-col gap-3">
-			<div>
-				<!-- <h2 class="text-center text-lg font-medium text-gray-700">IN Details</h2> -->
-				<label for="date" class="mt-2 block text-sm font-medium text-gray-600">
-					OUT Date
-					<input
-						class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-						type="date"
-						name="date"
-						placeholder="Date"
-						required
-						bind:value={date}
-					/>
-				</label>
-				<label for="time" class="mt-2 block text-sm font-medium text-gray-600">
-					OUT Time
-					<input
-						class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-						type="time"
-						name="time"
-						placeholder="Time"
-						required
-						bind:value={time}
-					/>
-				</label>
-			</div>
-			<div>
-				<h2 class="text-lg font-medium text-gray-700">OUT Image</h2>
-				<input
-					class="mt-1 w-full rounded-md border-2 border-dashed border-gray-400 px-2 py-3 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-					type="file"
-					name="out-img"
-					accept="image/*"
-					bind:this={in_file}
-					onchange={handleInImageChange}
-					required
-				/>
-				{#if show_in}
-					<div class="mt-2 flex justify-center">
-						<img class="h-auto w-70 rounded-md object-cover" bind:this={in_img} alt="OUT Preview" />
-					</div>
-				{/if}
-				<div class="mt-4 flex justify-center">
-					<button
-						class="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
-						type="submit">Add OUT</button
-					>
-				</div>
-			</div>
+		<label for="date" class="w-full">
+			<span class="block text-sm font-medium text-gray-600">OUT Date</span>
+			<input
+				class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+				type="date"
+				name="date"
+				placeholder="Date"
+				required
+				bind:value={date}
+			/>
 		</label>
+		<label for="time" class="w-full">
+			<span class="block text-sm font-medium text-gray-600">OUT Time</span>
+			<input
+				class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+				type="time"
+				name="time"
+				placeholder="Time"
+				required
+				bind:value={time}
+			/>
+		</label>
+
+		<div class="w-full">
+			<span class="block text-sm font-medium text-gray-600">OUT Image</span>
+			<input
+				class="mt-1 w-full rounded-md border-2 border-dashed border-gray-400 px-2 py-3 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+				type="file"
+				name="out-img"
+				accept="image/*"
+				bind:this={in_file}
+				onchange={handleInImageChange}
+				required
+			/>
+			{#if show_in}
+				<div class="mt-2 flex justify-center">
+					<img class="h-auto w-70 rounded-md object-cover" bind:this={in_img} alt="OUT Preview" />
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex items-center gap-2">
+			<input
+				type="checkbox"
+				name="finished"
+				class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+			/>
+			<label for="mark-finished" class="text-sm font-medium text-gray-700">
+				Mark as Finished
+			</label>
+		</div>
+
+		<div class="mt-4 flex w-full justify-center">
+			<button
+				class="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+				type="submit">Add OUT</button
+			>
+		</div>
 	</form>
 </div>

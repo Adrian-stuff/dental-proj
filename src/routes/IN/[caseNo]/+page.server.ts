@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from '../../$types';
 import { db } from '$lib/server/db';
 import { clinics, doctors, history, records } from '$lib/server/db/schema';
-import { desc } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 import { convertFileToBytea } from '$lib';
 import { redirect } from '@sveltejs/kit';
 
@@ -20,6 +20,10 @@ export const actions = {
     console.log('Form data:', data);
 
     try {
+      await db.update(records).set({
+
+        remarks: "pending",
+      } as unknown as typeof records.$inferInsert).where(sql`case_no = ${data.get('case_no')?.toString()}`);
       await db.insert(history).values({
         historyType: "in",
         recordId: data.get('case_no')?.toString(),

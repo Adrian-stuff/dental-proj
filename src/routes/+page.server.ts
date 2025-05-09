@@ -95,7 +95,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 
 export const actions: Actions = {
-  caseNo: async ({ request }) => {
+  filter: async ({ request }) => {
     const data = await request.formData();
     const caseNo = data.get('case_no')?.toString();
     const caseType = data.get('case_type')?.toString();
@@ -105,7 +105,7 @@ export const actions: Actions = {
     const remark = data.get('remark')?.toString();
 
     let whereConditions = [];
-
+    console.log(data)
     if (caseNo) {
       whereConditions.push(sql`case_no = ${caseNo}`);
     }
@@ -140,7 +140,7 @@ export const actions: Actions = {
       console.error("Database query error:", error);
       return { success: false, error: "Failed to retrieve data" };
     }
-    return { success: true, data: recordData, clinicName: recordData[0]?.clinicName, start_date, end_date, remark };
+    return { success: true, data: recordData, clinicName: clinicName != undefined ? clinicName : "", start_date, end_date, remark, caseType, caseNo };
   },
   clinics: async ({ request }) => {
     const data = await request.formData();

@@ -22,7 +22,8 @@ export const actions = {
     try {
       await db.update(records).set({
         dateDropoff: data.get("date"),
-        timeDropoff: data.get("time")
+        timeDropoff: data.get("time"),
+        remarks: data.get("finished") ? "finished" : "pending",
       } as unknown as typeof records.$inferInsert).where(sql`case_no = ${data.get('case_no')?.toString()}`);
       await db.insert(history).values({
         historyType: "out",

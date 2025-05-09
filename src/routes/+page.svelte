@@ -6,6 +6,20 @@
 	let { data, form }: PageProps = $props();
 	let table = $state(data.data);
 	let error = $state(false);
+
+	let filterCaseType = $state(
+		form != undefined && form?.success && form?.caseType ? form?.caseType.length > 0 : false
+	);
+	let filterCaseNo = $state(
+		form != undefined && form?.success && form?.caseNo ? form?.caseNo.length > 0 : false
+	);
+	let filterRemark = $state(
+		form != undefined && form?.success && form?.remark ? form?.remark.length > 0 : false
+	);
+	let filterDate = $state(
+		form != undefined && form?.success && form?.start_date ? form?.start_date.length > 0 : false
+	);
+
 	if (form?.success) {
 		table = form.data;
 		if (form.data.length === 0) {
@@ -18,7 +32,9 @@
 	);
 	let startDate: string | null = $state(form != undefined && form.success ? form.start_date : null);
 	let endDate: string | null = $state(form != undefined && form.success ? form.end_date : null);
-	let searchClinic = $state(data.clinicName || '');
+	let searchClinic = $state(
+		form != undefined && form.success ? form.clinicName : data.clinicName || ''
+	);
 	let isDropdownOpen = $state(false);
 	let isDeleting = $state(false);
 	let filteredClinics = $derived(
@@ -83,113 +99,162 @@
 
 <div class="flex flex-col">
 	<div class="m-2 flex flex-wrap items-center gap-4 print:hidden">
-		<form method="POST" action="?/caseNo" class="flex items-center gap-2">
-			<label for="clinic_name" class="relative flex flex-col items-start gap-1">
-				<h1 class="text-sm font-semibold text-gray-700">Clinic</h1>
+		<form method="POST" action="?/filter" class="flex items-center gap-2">
+			<label class="flex items-center gap-1">
+				<label for="clinic_name" class="relative flex flex-col items-start gap-1">
+					<h1 class="text-sm font-semibold text-gray-700">Clinic</h1>
+					<input
+						type="text"
+						placeholder="Search Clinic"
+						bind:value={searchClinic}
+						oninput={handleInputChange}
+						onfocus={() => (isDropdownOpen = true)}
+						onblur={handleBlur}
+						class="w-48 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+					/>
+					{#if isDropdownOpen && filteredClinics.length > 0}
+						<div
+							class="absolute top-full left-0 z-10 mt-1 w-48 rounded border border-gray-300 bg-white shadow-md"
+						>
+							{#each filteredClinics as clinic}
+								<button
+									type="button"
+									class="block w-full p-2 text-left transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-indigo-50 focus:outline-none"
+									onclick={() => selectClinic(clinic.value)}
+								>
+									{clinic.label}
+								</button>
+							{/each}
+						</div>
+					{/if}
+					{#if selectedClinic}
+						<input type="hidden" name="clinic_name" value={selectedClinic} />
+					{/if}
+				</label>
+			</label>
+
+			<label class="flex items-center gap-1">
 				<input
-					type="text"
-					placeholder="Search Clinic"
-					bind:value={searchClinic}
-					oninput={handleInputChange}
-					onfocus={() => (isDropdownOpen = true)}
-					onblur={handleBlur}
-					class="w-48 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+					type="checkbox"
+					name="filter_case_type"
+					bind:checked={filterCaseType}
+					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 				/>
-				{#if isDropdownOpen && filteredClinics.length > 0}
-					<div
-						class="absolute top-full left-0 z-10 mt-1 w-48 rounded border border-gray-300 bg-white shadow-md"
+				<label for="case_type" class="flex flex-col items-start gap-1">
+					<h1 class="text-sm font-semibold text-gray-700">Case Type</h1>
+					<select
+						name="case_type"
+						class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+						disabled={!filterCaseType}
 					>
-						{#each filteredClinics as clinic}
-							<button
-								type="button"
-								class="block w-full p-2 text-left transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-indigo-50 focus:outline-none"
-								onclick={() => selectClinic(clinic.value)}
-							>
-								{clinic.label}
-							</button>
+						{#each data.caseTypes as caseType}
+							{#if form?.success && form.caseType}
+								<option value={caseType.caseType} selected={caseType.caseType === form.caseType}>
+									{caseType.caseType}
+								</option>
+							{:else}
+								<option value={caseType.caseType}>
+									{caseType.caseType}
+								</option>
+							{/if}
 						{/each}
-					</div>
-				{/if}
-				{#if selectedClinic}
-					<input type="hidden" name="clinic_name" value={selectedClinic} required />
-				{/if}
+					</select>
+				</label>
 			</label>
-			<label for="case_type" class="flex flex-col items-start gap-1">
-				<h1 class="text-sm font-semibold text-gray-700">Case Type</h1>
-				<select
-					name="case_type"
-					class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-					required
-				>
-					{#each data.caseTypes as caseType}
-						<option value={caseType.caseType} selected={caseType.caseType === data.caseType}>
-							{caseType.caseType}
-						</option>
-					{/each}
-				</select>
-			</label>
-			<label for="case_no" class="flex flex-col items-start gap-1">
-				<h1 class="text-sm font-semibold text-gray-700">Case No</h1>
+
+			<label class="flex items-center gap-1">
 				<input
-					type="number"
-					name="case_no"
-					defaultValue={data.caseNo || ''}
-					placeholder="Enter Case No"
-					class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+					type="checkbox"
+					name="filter_case_no"
+					bind:checked={filterCaseNo}
+					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 				/>
+				<label for="case_no" class="flex flex-col items-start gap-1">
+					<h1 class="text-sm font-semibold text-gray-700">Case No</h1>
+					<input
+						type="number"
+						name="case_no"
+						defaultValue={data.caseNo || (form != undefined ? form?.caseNo : '')}
+						placeholder="Enter Case No"
+						class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+						disabled={!filterCaseNo}
+					/>
+				</label>
 			</label>
-			<label for="remark" class="flex flex-col items-start gap-1">
-				<h1 class="text-sm font-semibold text-gray-700">Remark</h1>
-				<select
-					name="remark"
-					class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-					required
-				>
-					{#each ['finished', 'pending'] as remark}
-						{#if form?.success}
-							<option value={remark} selected={remark === form.remark}>
-								{remark}
-							</option>
-						{:else}
-							<option value={remark}>
-								{remark}
-							</option>
-						{/if}
-					{/each}
-				</select>
-			</label>
-			<label for="start_date" class="flex flex-col items-start gap-1">
-				<h1 class="text-sm font-semibold text-gray-700">Start Date</h1>
+
+			<label class="flex items-center gap-1">
 				<input
-					type="date"
-					name="start_date"
-					bind:value={startDate}
-					class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-					required
+					type="checkbox"
+					name="filter_remark"
+					bind:checked={filterRemark}
+					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 				/>
+				<label for="remark" class="flex flex-col items-start gap-1">
+					<h1 class="text-sm font-semibold text-gray-700">Remark</h1>
+					<select
+						name="remark"
+						class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+						disabled={!filterRemark}
+					>
+						{#each ['finished', 'pending'] as remark}
+							{#if form?.success}
+								<option value={remark} selected={remark === form.remark}>
+									{remark}
+								</option>
+							{:else}
+								<option value={remark}>
+									{remark}
+								</option>
+							{/if}
+						{/each}
+					</select>
+				</label>
 			</label>
-			<label for="end_date" class="flex flex-col items-start gap-1">
-				<h1 class="text-sm font-semibold text-gray-700">End Date</h1>
+
+			<label class="flex items-center gap-1">
 				<input
-					type="date"
-					name="end_date"
-					bind:value={endDate}
-					class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-					required
+					type="checkbox"
+					name="filter_start_date"
+					bind:checked={filterDate}
+					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 				/>
+				<label for="start_date" class="flex flex-col items-start gap-1">
+					<h1 class="text-sm font-semibold text-gray-700">Start Date</h1>
+					<input
+						type="date"
+						name="start_date"
+						bind:value={startDate}
+						class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+						disabled={!filterDate}
+						required={filterDate}
+					/>
+				</label>
 			</label>
+
+			<label class="flex items-center gap-1">
+				<label for="end_date" class="flex flex-col items-start gap-1">
+					<h1 class="text-sm font-semibold text-gray-700">End Date</h1>
+					<input
+						type="date"
+						name="end_date"
+						bind:value={endDate}
+						class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+						disabled={!filterDate}
+						required={filterDate}
+					/>
+				</label>
+			</label>
+
 			<button
-				class="self-end rounded border border-gray-300 bg-blue-500 p-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-400 sm:text-sm"
+				class="self-end rounded border border-gray-300 bg-blue-500 p-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
 				type="submit"
-				disabled={!selectedClinic}
+				disabled={!selectedClinic &&
+					!filterCaseType &&
+					!filterCaseNo &&
+					!filterRemark &&
+					!filterDate}
 			>
 				QUERY
-			</button>
-			<button
-				class="self-end rounded border border-gray-300 bg-green-500 p-2 text-white shadow-sm hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
-				type="submit"
-			>
-				FILTER BY DATE
 			</button>
 			<button
 				class="self-end rounded border border-gray-300 bg-blue-500 p-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
