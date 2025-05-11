@@ -245,3 +245,5 @@ export function generateRecordsSummary(records: RecordItem[]): RecordsSummary {
     processStatus: finalProcessStatus,
   };
 }
+
+

@@ -17,6 +17,14 @@
 		</button>
 		<div class="top-7 right-5 flex justify-between gap-2">
 			<a
+				class=" rounded border border-violet-300 bg-violet-500 p-2 text-white shadow-sm hover:bg-violet-700 focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
+				href="/sales">SALES</a
+			>
+			<a
+				class=" rounded border border-orange-300 bg-orange-500 p-2 text-white shadow-sm hover:bg-orange-700 focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
+				href="/expenses">EXPENSES</a
+			>
+			<a
 				class=" rounded border border-gray-300 bg-gray-500 p-2 text-white shadow-sm hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
 				href="/edit_info">EDIT INFOS</a
 			>

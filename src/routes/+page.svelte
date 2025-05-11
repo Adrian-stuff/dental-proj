@@ -26,6 +26,8 @@
 		if (form.data.length === 0) {
 			error = true;
 		}
+	} else if (form !== undefined && form?.success === false) {
+		error = true;
 	}
 	console.log(data.data);
 	let selectedClinic = $state<string | null>(
@@ -459,7 +461,7 @@
 										</button>
 										<input
 											type="text"
-											value={row[Object.keys(table[0])[2]]}
+											value={row[Object.keys(table[0])[0]]}
 											name="case_delete"
 											hidden
 										/>
@@ -470,6 +472,11 @@
 					{/each}
 				</tbody>
 			</table>
+		{/if}
+		{#if !form?.success && form?.error}
+			<div class="flex h-screen items-center justify-center">
+				<h1 class="text-2xl font-semibold text-red-500">{form.error}</h1>
+			</div>
 		{/if}
 		{#if error || data.data.length === 0}
 			<div class="flex h-screen items-center justify-center">

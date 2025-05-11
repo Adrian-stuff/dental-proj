@@ -4,6 +4,14 @@ DROP TABLE IF EXISTS records CASCADE; -- Drop records next, as both history and 
 DROP TABLE IF EXISTS doctors CASCADE; -- Drop doctors, which depends on clinics
 DROP TABLE IF EXISTS clinics CASCADE; -- Drop clinics last, as it is depended on by doctors.
 DROP TABLE IF EXISTS case_types CASCADE; -- Drop clinics last, as it is depended on by doctors.
+DROP TABLE IF EXISTS supply CASCADE;
+
+
+CREATE TABLE supply (
+	supply_id SERIAL PRIMARY KEY,
+	supply_date DATE NOT NULL,
+	supply_cost DECIMAL NOT NULL
+);
 
 -- Table for Case Type
 CREATE TABLE case_types (

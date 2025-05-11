@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { caseTypes, clinics, doctors, history, records } from '$lib/server/db/schema';
 import { desc, eq, and, sql } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
+import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, url }) => {
   const caseNo = url.searchParams.get('case_no')?.toString();
@@ -140,6 +141,9 @@ export const actions: Actions = {
       console.error("Database query error:", error);
       return { success: false, error: "Failed to retrieve data" };
     }
+    if (recordData.length <= 0) {
+      return { success: false, error: "No record found" };
+    }
     return { success: true, data: recordData, clinicName: clinicName != undefined ? clinicName : "", start_date, end_date, remark, caseType, caseNo };
   },
   clinics: async ({ request }) => {
@@ -213,7 +217,7 @@ export const actions: Actions = {
     }
     return { success: true, data: recordData, remark };
   },
-  delete: async ({ request }) => {
+  deleteCase: async ({ request }) => {
     const data = await request.formData();
     const caseNoToDelete = data.get("case_delete")?.toString();
 
@@ -223,9 +227,10 @@ export const actions: Actions = {
     try {
       await db.transaction(async tx => {
         // Use eq for a more type-safe comparison.
-        await tx.delete(records).where(eq(records.caseNo, caseNoToDelete));
+        await tx.delete(records).where(eq(records.recordId, caseNoToDelete));
         await tx.delete(history).where(eq(history.historyId, caseNoToDelete));
       });
+      redirect(303, `/`); // Redirect to the desired page after successful deletion                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
       return { success: true }; // Indicate success
     } catch (error) {
       console.error('Error deleting record:', error);

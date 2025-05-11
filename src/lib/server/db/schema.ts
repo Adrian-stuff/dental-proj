@@ -45,6 +45,13 @@ export const doctorsRelations = relations(doctors, ({ one, many }) => ({
 	records: many(records),
 }));
 
+export const supply = pgTable("supply", {
+	supplyId: serial("supply_id").primaryKey(),
+	supplyDate: date("supply_date").notNull(),
+	supplyCost: decimal("supply_cost").notNull(),
+
+});
+
 // Table for Records
 export const records = pgTable("records", {
 	recordId: serial("record_id").primaryKey(),
