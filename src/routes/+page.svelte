@@ -2,6 +2,7 @@
 	import { redirect } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
 	import { goto } from '$app/navigation';
+	import { formatDate, generateRecordsSummary, getCurrentDateTime, getRecordDateRange } from '$lib';
 
 	let { data, form }: PageProps = $props();
 	let table = $state(data.data);
@@ -93,6 +94,8 @@
 			});
 		}
 	}
+
+	let customerName = form?.success ? form.clinicName : data.clinicName;
 
 	let displayedKeys = [3, 5, 9, 2, 10, 11, 12, 15];
 </script>
@@ -279,15 +282,84 @@
 	</div>
 
 	<div id="printarea" class="flex flex-col">
-		{#if form?.success || data.hasQuery}
-			<div class="grid-row-3 grid px-2">
-				<div>
-					<h1 class="text-lg font-semibold text-gray-800">SOA CLINIC</h1>
+		{#if form?.success}
+			<div class="flex flex-row items-start justify-between space-x-12 p-6">
+				<div class="flex flex-col">
+					<h1 class="text-2xl font-bold text-gray-900">CASSEY DENTAL LABORATORY</h1>
+					<h2 class="mt-1 text-xl font-semibold text-gray-700">STATEMENT OF ACCOUNT</h2>
 				</div>
-				<div class="text-center">
-					<h1 class="text-4xl font-bold text-indigo-600">
-						{form?.success ? form.clinicName : data.clinicName}
-					</h1>
+
+				<div class="flex flex-col items-start space-y-1.5 pt-1 text-sm text-gray-800">
+					<div class="flex items-baseline">
+						<span class="w-32 pr-2 text-right font-medium text-gray-600">PRINT DATE:</span>
+						<span class="inline-block w-40 border-b border-gray-500"
+							>{getCurrentDateTime().fullDateTime}</span
+						>
+					</div>
+					<div class="flex items-baseline">
+						<span class="w-fit pr-2 text-right font-medium text-gray-600">CUSTOMER NAME:</span>
+						<span class="inline-block w-40 border-b border-gray-500">{customerName}</span>
+					</div>
+					<div class="flex items-baseline">
+						<span class="w-32 pr-2 text-right font-medium text-gray-600">START DATE:</span>
+						<span class="inline-block w-40 border-b border-gray-500"
+							>{formatDate(getRecordDateRange(form.data).startingDate)}</span
+						>
+					</div>
+					<div class="flex items-baseline">
+						<span class="w-32 pr-2 text-right font-medium text-gray-600">END DATE:</span>
+						<span class="inline-block w-40 border-b border-gray-500"
+							>{formatDate(getRecordDateRange(form.data).recentDate)}</span
+						>
+					</div>
+					<div class="flex items-baseline">
+						<span class="w-32 pr-2 text-right font-medium text-gray-600">STATUS:</span>
+						<span class="inline-block w-40 font-semibold text-gray-900"
+							>{generateRecordsSummary(form.data).processStatus} - {generateRecordsSummary(
+								form.data
+							).financialStatus}
+						</span>
+					</div>
+				</div>
+			</div>
+		{:else if data.hasQuery}
+			<div class="flex flex-row items-start justify-between space-x-12 p-6">
+				<div class="flex flex-col">
+					<h1 class="text-2xl font-bold text-gray-900">CASSEY DENTAL LABORATORY</h1>
+					<h2 class="mt-1 text-xl font-semibold text-gray-700">STATEMENT OF ACCOUNT</h2>
+				</div>
+
+				<div class="flex flex-col items-start space-y-1.5 pt-1 text-sm text-gray-800">
+					<div class="flex items-baseline">
+						<span class="w-32 pr-2 text-right font-medium text-gray-600">PRINT DATE:</span>
+						<span class="inline-block w-40 border-b border-gray-500"
+							>{getCurrentDateTime().fullDateTime}</span
+						>
+					</div>
+					<div class="flex items-baseline">
+						<span class="w-fit pr-2 text-right font-medium text-gray-600">CUSTOMER NAME:</span>
+						<span class="inline-block w-40 border-b border-gray-500">{customerName}</span>
+					</div>
+					<div class="flex items-baseline">
+						<span class="w-32 pr-2 text-right font-medium text-gray-600">START DATE:</span>
+						<span class="inline-block w-40 border-b border-gray-500"
+							>{formatDate(getRecordDateRange(data.data).startingDate)}</span
+						>
+					</div>
+					<div class="flex items-baseline">
+						<span class="w-32 pr-2 text-right font-medium text-gray-600">END DATE:</span>
+						<span class="inline-block w-40 border-b border-gray-500"
+							>{formatDate(getRecordDateRange(data.data).recentDate)}</span
+						>
+					</div>
+					<div class="flex items-baseline">
+						<span class="w-32 pr-2 text-right font-medium text-gray-600">STATUS:</span>
+						<span class="inline-block w-40 font-semibold text-gray-900"
+							>{generateRecordsSummary(data.data).processStatus} - {generateRecordsSummary(
+								data.data
+							).financialStatus}
+						</span>
+					</div>
 				</div>
 			</div>
 		{/if}
@@ -353,21 +425,21 @@
 							>
 								<a
 									aria-label="in"
-									href={`/IN/${row[Object.keys(table[0])[2]]}`}
+									href={`/IN/${row[Object.keys(table[0])[0]]}`}
 									class=" inline-block rounded bg-blue-500 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-blue-700"
 								>
 									IN
 								</a>
 								<a
 									aria-label="out"
-									href={`/OUT/${row[Object.keys(table[0])[2]]}`}
+									href={`/OUT/${row[Object.keys(table[0])[0]]}`}
 									class="inline-block rounded bg-orange-400 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-orange-600"
 								>
 									OUT
 								</a>
 								<a
 									aria-label="out"
-									href={`/AMOUNT/${row[Object.keys(table[0])[2]]}`}
+									href={`/AMOUNT/${row[Object.keys(table[0])[0]]}`}
 									class="inline-block rounded bg-yellow-400 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-yellow-600"
 								>
 									AMOUNT

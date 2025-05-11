@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import '../app.css';
 	let { children } = $props();
 </script>
@@ -6,8 +7,8 @@
 <nav class=" top-0 left-0 z-50 w-full bg-gray-800 text-white shadow-md print:hidden">
 	<div class=" mx-auto flex items-center justify-between px-4 py-2">
 		<button
-			onclick={() => {
-				window.location.href = '/';
+			onclick={async () => {
+				await goto('/');
 				window.location.reload();
 			}}
 			class="text-lg font-bold transition-colors duration-200 hover:text-gray-300"

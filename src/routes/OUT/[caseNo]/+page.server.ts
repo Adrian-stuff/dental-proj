@@ -8,9 +8,10 @@ import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params }) => {
   const caseNo = params.caseNo.toString();
-
+  let recordData = await db.select().from(records).where(sql`record_id = ${caseNo}`);
   return {
     caseNo,
+    recordData: recordData[0],
   };
 };
 

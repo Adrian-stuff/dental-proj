@@ -37,7 +37,9 @@
 </script>
 
 <div class="flex flex-col items-center justify-center rounded-md bg-white p-8">
-	<h1 class="mb-4 text-2xl font-semibold">IN Case No: {data.caseNo}</h1>
+	<h1 class="mb-4 text-2xl font-semibold">
+		IN Case No: {data.recordData.caseType} - {data.recordData.caseNo}
+	</h1>
 
 	<form
 		method="POST"
