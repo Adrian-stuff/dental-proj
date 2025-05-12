@@ -121,6 +121,22 @@
 	let customerName = form?.success ? form.clinicName : data.clinicName;
 
 	let displayedKeys = [3, 5, 9, 2, 10, 11, 12, 15];
+
+	// Pagination variables
+	let currentPage = $state(1);
+	let itemsPerPage = $state(10);
+	let totalPages = $derived(Math.ceil(table.length / itemsPerPage));
+
+	// Calculate paginated data
+	let paginatedData = $derived(
+		table.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+	);
+
+	function changePage(page: number) {
+		if (page >= 1 && page <= totalPages) {
+			currentPage = page;
+		}
+	}
 </script>
 
 <div class="flex flex-col">
@@ -444,8 +460,8 @@
 					</tr>
 				</thead>
 				<tbody class="bg-white">
-					{#each table as row, index}
-						<tr class={`border-gray-300 ${+row.excessPayment >= 0 ? 'bg-blue-50' : 'bg-red-100'}`}>
+					{#each paginatedData as row, index}
+						<tr class={`border-gray-300 ${+row.excessPayment >= 0 ? 'bg-blue-100' : 'bg-red-300'}`}>
 							{#each displayedKeys as keyIndex}
 								<td class="border border-gray-300 px-6 py-4 text-gray-900">
 									{#if keyIndex === 11 || keyIndex === 12}
@@ -516,6 +532,106 @@
 					{/each}
 				</tbody>
 			</table>
+
+			<div class="mb-4 flex items-center gap-2 print:hidden">
+				<label for="itemsPerPage" class="text-sm font-medium text-[#164154]">Items per page:</label>
+				<select
+					id="itemsPerPage"
+					bind:value={itemsPerPage}
+					class="rounded border border-[#A1AEB3] bg-white px-2 py-1 text-sm text-[#164154]"
+				>
+					<option value={10}>10</option>
+					<option value={25}>25</option>
+					<option value={50}>50</option>
+					<option value={100}>100</option>
+				</select>
+			</div>
+
+			{#if totalPages > 1}
+				<div
+					class="mt-4 flex items-center justify-between border-t border-[#A1AEB3] bg-white px-4 py-3 sm:px-6 print:hidden"
+				>
+					<div class="flex flex-1 justify-between sm:hidden">
+						<button
+							class="relative inline-flex items-center rounded-md border border-[#A1AEB3] bg-white px-4 py-2 text-sm font-medium text-[#164154] hover:bg-[#A1AEB3] disabled:opacity-50"
+							onclick={() => changePage(currentPage - 1)}
+							disabled={currentPage === 1}
+						>
+							Previous
+						</button>
+						<button
+							class="relative ml-3 inline-flex items-center rounded-md border border-[#A1AEB3] bg-white px-4 py-2 text-sm font-medium text-[#164154] hover:bg-[#A1AEB3] disabled:opacity-50"
+							onclick={() => changePage(currentPage + 1)}
+							disabled={currentPage === totalPages}
+						>
+							Next
+						</button>
+					</div>
+					<div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+						<div>
+							<p class="text-sm text-[#778B92]">
+								Showing
+								<span class="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
+								to
+								<span class="font-medium">
+									{Math.min(currentPage * itemsPerPage, table.length)}
+								</span>
+								of
+								<span class="font-medium">{table.length}</span>
+								results
+							</p>
+						</div>
+						<div>
+							<nav
+								class="isolate inline-flex -space-x-px rounded-md shadow-sm"
+								aria-label="Pagination"
+							>
+								<button
+									class="relative inline-flex items-center rounded-l-md border border-[#A1AEB3] bg-white px-2 py-2 text-sm font-medium text-[#164154] hover:bg-[#A1AEB3] disabled:opacity-50"
+									onclick={() => changePage(currentPage - 1)}
+									disabled={currentPage === 1}
+								>
+									<span class="sr-only">Previous</span>
+									<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+										<path
+											fill-rule="evenodd"
+											d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</button>
+
+								{#each Array(totalPages) as _, i}
+									<button
+										class="relative inline-flex items-center border border-[#A1AEB3] bg-white px-4 py-2 text-sm font-medium {currentPage ===
+										i + 1
+											? 'bg-[#164154] text-white'
+											: 'text-[#164154] hover:bg-[#A1AEB3]'}"
+										onclick={() => changePage(i + 1)}
+									>
+										{i + 1}
+									</button>
+								{/each}
+
+								<button
+									class="relative inline-flex items-center rounded-r-md border border-[#A1AEB3] bg-white px-2 py-2 text-sm font-medium text-[#164154] hover:bg-[#A1AEB3] disabled:opacity-50"
+									onclick={() => changePage(currentPage + 1)}
+									disabled={currentPage === totalPages}
+								>
+									<span class="sr-only">Next</span>
+									<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+										<path
+											fill-rule="evenodd"
+											d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</button>
+							</nav>
+						</div>
+					</div>
+				</div>
+			{/if}
 		{/if}
 		{#if !form?.success && form?.error}
 			<div class="flex h-screen items-center justify-center">
