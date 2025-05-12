@@ -54,16 +54,43 @@
 
 	// Calculate total supply from supplies array
 	const totalSupply: number = calculateTotalSupply(supplies);
-	const staffSalaries: StaffSalary[] = [];
-	const totalSalaries: number = 0;
-	const totalExpenses: number = totalSupply + totalSalaries;
-	const totalProfit: number = totalIncome - totalExpenses;
+	let staffSalaries = $state<StaffSalary[]>([]);
+	let newStaffName = $state('');
+	let newStaffSalary = $state('');
+	let totalSalaries = $state(0);
+	let totalExpenses = $state(0);
+	let totalProfit = $state(0);
 
 	// Format date for display
 	function formatDate(dateString: string): string {
 		const date = new Date(dateString);
 		return date.toLocaleDateString();
 	}
+
+	function addSalary() {
+		if (newStaffName && newStaffSalary) {
+			staffSalaries = [
+				...staffSalaries,
+				{
+					name: newStaffName,
+					salary: parseFloat(newStaffSalary)
+				}
+			];
+			newStaffName = '';
+			newStaffSalary = '';
+		}
+	}
+
+	function removeSalary(index: number) {
+		staffSalaries = staffSalaries.filter((_, i) => i !== index);
+	}
+
+	// Update total calculations
+	$effect(() => {
+		totalSalaries = staffSalaries.reduce((total, staff) => total + staff.salary, 0);
+		totalExpenses = totalSupply + totalSalaries;
+		totalProfit = totalIncome - totalExpenses;
+	});
 </script>
 
 <div class="container mx-auto flex flex-col items-center justify-center p-4">
@@ -71,7 +98,7 @@
 		<h1 class="text-2xl font-bold">Financial Summary</h1>
 
 		<!-- Month Year Picker Form -->
-		<form method="POST" action="?/changeDate" class="flex items-center gap-4">
+		<form method="POST" action="?/changeDate" class="flex items-center gap-4 print:hidden">
 			<MonthYearPicker bind:selectedMonth bind:selectedYear />
 			<button
 				type="submit"
@@ -114,7 +141,7 @@
 							<tr>
 								<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">{client.name}</td>
 								<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
-									{client.income.toFixed(2)}
+									&#8369;{client.income.toFixed(2)}
 								</td>
 							</tr>
 						{/each}
@@ -125,7 +152,7 @@
 							<td
 								class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
 							>
-								{totalIncome.toFixed(2)}
+								&#8369;{totalIncome.toFixed(2)}
 							</td>
 						</tr>
 					</tbody>
@@ -161,7 +188,7 @@
 											{formatDate(supply.supplyDate)}
 										</td>
 										<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
-											{parseFloat(supply.supplyCost).toFixed(2)}
+											&#8369;{parseFloat(supply.supplyCost).toFixed(2)}
 										</td>
 									</tr>
 								{/each}
@@ -172,11 +199,52 @@
 									<td
 										class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
 									>
-										{totalSupply.toFixed(2)}
+										&#8369;{totalSupply.toFixed(2)}
 									</td>
 								</tr>
 							</tbody>
 						</table>
+					</div>
+				</div>
+
+				<div>
+					<h3 class="mb-4 text-lg font-semibold">Add Staff Salary</h3>
+					<div class="mb-4 flex gap-4">
+						<div class="flex-1">
+							<label for="staffName" class="mb-1 block text-sm font-medium text-gray-700">
+								Staff Name
+							</label>
+							<input
+								type="text"
+								id="staffName"
+								bind:value={newStaffName}
+								class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+								placeholder="Enter staff name"
+							/>
+						</div>
+						<div class="flex-1">
+							<label for="staffSalary" class="mb-1 block text-sm font-medium text-gray-700">
+								Salary Amount
+							</label>
+							<input
+								type="number"
+								id="staffSalary"
+								bind:value={newStaffSalary}
+								class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+								placeholder="Enter salary amount"
+								min="0"
+								step="0.01"
+							/>
+						</div>
+						<div class="flex items-end">
+							<button
+								type="button"
+								onclick={addSalary}
+								class="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+							>
+								Add Salary
+							</button>
+						</div>
 					</div>
 				</div>
 
@@ -196,14 +264,48 @@
 									>
 										Salary
 									</th>
+									<th
+										class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+									>
+										Actions
+									</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-gray-200 bg-white">
-								{#each staffSalaries as staff}
+								{#if staffSalaries.length === 0}
 									<tr>
-										<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">{staff.name}</td>
+										<td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
+											No staff salaries added
+										</td>
+									</tr>
+								{/if}
+								{#each staffSalaries as staff, index}
+									<tr>
+										<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+											{staff.name}
+										</td>
 										<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
-											{staff.salary.toFixed(2)}
+											&#8369;{staff.salary.toFixed(2)}
+										</td>
+										<td class="px-6 py-4 text-right">
+											<button
+												type="button"
+												onclick={() => removeSalary(index)}
+												class="text-red-600 hover:text-red-800"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													class="h-5 w-5"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</button>
 										</td>
 									</tr>
 								{/each}
@@ -212,9 +314,10 @@
 										Total Salary
 									</td>
 									<td
+										colspan="2"
 										class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
 									>
-										{totalSalaries.toFixed(2)}
+										&#8369;{totalSalaries.toFixed(2)}
 									</td>
 								</tr>
 							</tbody>
@@ -224,7 +327,9 @@
 			</div>
 			<div class="mt-4">
 				<p class="text-sm font-semibold">
-					Total Expenses: <span class="font-normal text-gray-900">{totalExpenses.toFixed(2)}</span>
+					Total Expenses: <span class="font-normal text-gray-900"
+						>&#8369;{totalExpenses.toFixed(2)}</span
+					>
 				</p>
 			</div>
 		</div>
@@ -232,6 +337,8 @@
 
 	<div class="mt-8 rounded-lg bg-white p-6 shadow-md">
 		<h2 class="mb-2 text-xl font-semibold">Profit</h2>
-		<p class="text-xl font-bold text-green-500">Total Profit: {totalProfit.toFixed(2)}</p>
+		<p class={`text-xl font-bold ${totalProfit > 0 ? 'text-green-500' : 'text-red-400'}`}>
+			Total Profit: &#8369;{totalProfit.toFixed(2)}
+		</p>
 	</div>
 </div>

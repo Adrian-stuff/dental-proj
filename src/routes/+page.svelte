@@ -20,6 +20,9 @@
 	let filterDate = $state(
 		form != undefined && form?.success && form?.start_date ? form?.start_date.length > 0 : false
 	);
+	let filterMonth = $state(
+		form != undefined && form?.success && form?.month ? form?.month.length > 0 : false
+	);
 
 	if (form?.success) {
 		table = form.data;
@@ -35,6 +38,9 @@
 	);
 	let startDate: string | null = $state(form != undefined && form.success ? form.start_date : null);
 	let endDate: string | null = $state(form != undefined && form.success ? form.end_date : null);
+	let selectedMonth = $state(
+		form?.success ? form.month : (new Date().getMonth() + 1).toString().padStart(2, '0')
+	);
 	let searchClinic = $state(
 		form != undefined && form.success ? form.clinicName : data.clinicName || ''
 	);
@@ -45,6 +51,21 @@
 			clinic.label.toLowerCase().includes(searchClinic.toLowerCase())
 		) || []
 	);
+
+	const months = [
+		{ value: '01', label: 'January' },
+		{ value: '02', label: 'February' },
+		{ value: '03', label: 'March' },
+		{ value: '04', label: 'April' },
+		{ value: '05', label: 'May' },
+		{ value: '06', label: 'June' },
+		{ value: '07', label: 'July' },
+		{ value: '08', label: 'August' },
+		{ value: '09', label: 'September' },
+		{ value: '10', label: 'October' },
+		{ value: '11', label: 'November' },
+		{ value: '12', label: 'December' }
+	];
 
 	function handleInputChange(event: Event) {
 		searchClinic = (event.target as HTMLInputElement).value;
@@ -250,6 +271,28 @@
 				</label>
 			</label>
 
+			<label class="flex items-center gap-1">
+				<input
+					type="checkbox"
+					name="filter_month"
+					bind:checked={filterMonth}
+					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+				/>
+				<label for="month" class="flex flex-col items-start gap-1">
+					<h1 class="text-sm font-semibold text-gray-700">Month</h1>
+					<select
+						name="month"
+						class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+						bind:value={selectedMonth}
+						disabled={!filterMonth}
+					>
+						{#each months as { value, label }}
+							<option {value}>{label}</option>
+						{/each}
+					</select>
+				</label>
+			</label>
+
 			<button
 				class="self-end rounded border border-gray-300 bg-blue-500 p-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
 				type="submit"
@@ -257,7 +300,8 @@
 					!filterCaseType &&
 					!filterCaseNo &&
 					!filterRemark &&
-					!filterDate}
+					!filterDate &&
+					!filterMonth}
 			>
 				QUERY
 			</button>

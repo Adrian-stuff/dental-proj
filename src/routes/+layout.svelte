@@ -1,20 +1,31 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import '../app.css';
 	let { children } = $props();
+	let url = $derived(page.url);
 </script>
 
 <nav class=" top-0 left-0 z-50 w-full bg-gray-800 text-white shadow-md print:hidden">
 	<div class=" mx-auto flex items-center justify-between px-4 py-2">
-		<button
-			onclick={async () => {
-				await goto('/');
-				window.location.reload();
-			}}
-			class="text-lg font-bold transition-colors duration-200 hover:text-gray-300"
-		>
-			Home
-		</button>
+		{#if url.pathname !== '/'}
+			<a
+				href="/"
+				class="text-lg font-bold transition-colors duration-200 hover:cursor-pointer hover:text-gray-300"
+			>
+				Home
+			</a>
+		{:else}
+			<button
+				class="text-lg font-bold transition-colors duration-200 hover:cursor-pointer hover:text-gray-300"
+				onclick={async () => {
+					await goto('/');
+					window.location.reload();
+				}}
+			>
+				Home
+			</button>
+		{/if}
 		<div class="top-7 right-5 flex justify-between gap-2">
 			<a
 				class=" rounded border border-violet-300 bg-violet-500 p-2 text-white shadow-sm hover:bg-violet-700 focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 focus:outline-none sm:text-sm"

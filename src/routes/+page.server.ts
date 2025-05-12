@@ -95,7 +95,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 };
 
 
-export const actions: Actions = {
+export const actions = {
   filter: async ({ request }) => {
     const data = await request.formData();
     const caseNo = data.get('case_no')?.toString();
@@ -104,6 +104,8 @@ export const actions: Actions = {
     const start_date = data.get('start_date')?.toString();
     const end_date = data.get('end_date')?.toString();
     const remark = data.get('remark')?.toString();
+    const filterMonth = data.get('filter_month') === 'on';
+    const month = data.get('month');
 
     let whereConditions = [];
     console.log(data)
@@ -121,6 +123,9 @@ export const actions: Actions = {
     }
     if (remark) {
       whereConditions.push(sql`remarks = ${remark}`);
+    }
+    if (filterMonth && month) {
+      whereConditions.push(sql`EXTRACT(MONTH FROM created_at) = ${month}`);
     }
 
     let recordData;
@@ -144,7 +149,7 @@ export const actions: Actions = {
     if (recordData.length <= 0) {
       return { success: false, error: "No record found" };
     }
-    return { success: true, data: recordData, clinicName: clinicName != undefined ? clinicName : "", start_date, end_date, remark, caseType, caseNo };
+    return { success: true, data: recordData, clinicName: clinicName != undefined ? clinicName : "", start_date, end_date, remark, caseType, caseNo, month: filterMonth ? month : null };
   },
   clinics: async ({ request }) => {
     const data = await request.formData();
@@ -237,4 +242,4 @@ export const actions: Actions = {
       return { success: false, error: 'Failed to delete record data' }; // Provide error details
     }
   }
-};
+} satisfies Actions;

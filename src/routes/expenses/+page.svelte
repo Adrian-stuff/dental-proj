@@ -145,7 +145,7 @@
 								{record.supplyDate}
 							</td>
 							<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
-								${record.supplyCost}
+								&#8369;{record.supplyCost}
 							</td>
 						</tr>
 					{/each}
