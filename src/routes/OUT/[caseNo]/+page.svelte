@@ -46,7 +46,10 @@
 		enctype="multipart/form-data"
 		class="flex w-full max-w-md flex-col items-start justify-center space-y-6 rounded border border-gray-300 bg-red-100 px-8 py-6"
 	>
-		<input type="text" name="case_no" value={data.caseNo} hidden />
+		<input type="text" name="record_id" value={data.caseNo} hidden />
+		<input type="text" name="case_no" value={data.recordData.caseNo} hidden />
+
+		<input type="text" name="case_type" value={data.recordData.caseType} hidden />
 		<label for="date" class="w-full">
 			<span class="block text-sm font-medium text-gray-600">OUT Date</span>
 			<input

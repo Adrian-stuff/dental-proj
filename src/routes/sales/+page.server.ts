@@ -28,41 +28,72 @@ const formatDate = (date: Date): string => {
 };
 export const load: PageServerLoad = async ({ url }) => {
   const searchParams = url.searchParams;
-  const currentDate = new Date();
+  const exactDate = searchParams.get('date');
   
-  // Get month and year from URL params or use current date
-  const selectedYear = parseInt(searchParams.get('year') || currentDate.getFullYear().toString());
-  const selectedMonth = parseInt(searchParams.get('month') || (currentDate.getMonth() + 1).toString());
+  if (exactDate) {
+      const date = new Date(exactDate);
+      // Query for exact date
+      const recordData = await db
+          .select()
+          .from(records)
+          .where(sql`DATE(created_at) = ${exactDate}`);
 
-  // Get the first and last day of the selected month
-  const startDate = new Date(selectedYear, selectedMonth - 1, 1);
-  const endDate = new Date(selectedYear, selectedMonth, 0);
+      const supplies = await db
+          .select()
+          .from(supply)
+          .where(sql`DATE(supply_date) = ${exactDate}`);
 
-  const recordData = await db
-    .select()
-    .from(records)
-    .where(sql`"created_at" BETWEEN ${timestampDate(startDate)} AND ${timestampDate(endDate)}`);
+      return {
+          currentDate: exactDate,
+          currentMonth: date.getMonth() + 1,
+          currentYear: date.getFullYear(),
+          recordData,
+          supplies
+      };
+  } else {
+      const currentDate = new Date();
+  
+      // Get month and year from URL params or use current date
+      const selectedYear = parseInt(searchParams.get('year') || currentDate.getFullYear().toString());
+      const selectedMonth = parseInt(searchParams.get('month') || (currentDate.getMonth() + 1).toString());
 
-  const supplies = await db
-    .select()
-    .from(supply)
-    .where(sql`"supply_date" BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)}`);
+      // Get the first and last day of the selected month
+      const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+      const endDate = new Date(selectedYear, selectedMonth, 0);
 
-  return {
-    currentMonth: selectedMonth,
-    currentYear: selectedYear,
-    recordData,
-    supplies,
-  };
+      const recordData = await db
+        .select()
+        .from(records)
+        .where(sql`"created_at" BETWEEN ${timestampDate(startDate)} AND ${timestampDate(endDate)}`);
+
+      const supplies = await db
+        .select()
+        .from(supply)
+        .where(sql`"supply_date" BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)}`);
+
+      return {
+        currentMonth: selectedMonth,
+        currentYear: selectedYear,
+        recordData,
+        supplies,
+      };
+  }
 };
 
 export const actions = {
   changeDate: async ({ request }) => {
     const data = await request.formData();
-    const month = data.get('month');
-    const year = data.get('year');
+    const exactDate = data.get('exact_date');
     
-    // Redirect to the same page with new month/year parameters
-    throw redirect(303, `?month=${month}&year=${year}`);
+    if (exactDate) {
+        // Handle exact date query
+        const date = new Date(exactDate as string);
+        return redirect(303, `?date=${exactDate}`);
+    } else {
+        // Handle month/year query
+        const month = data.get('month');
+        const year = data.get('year');
+        return redirect(303, `?month=${month}&year=${year}`);
+    }
   }
 } satisfies Actions;

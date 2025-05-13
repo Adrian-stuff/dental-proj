@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ params }) => {
   const caseNo = params.caseNo.toString();
   let recordData = [];
   try {
-    recordData = await db.select().from(records).where(sql`case_no = ${caseNo}`).orderBy(desc(records.recordId)).limit(1)
+    recordData = await db.select().from(records).where(sql`record_id = ${caseNo}`).orderBy(desc(records.recordId)).limit(1)
     console.log(recordData)
   } catch (error) {
     console.error('Error:', error);
@@ -27,14 +27,14 @@ export const actions = {
     console.log('Form data:', data);
     const caseNo = params.caseNo.toString();
     try {
-      await db.update(records).set({ totalAmount: data.get("total_amount"), paidAmount: data.get("paid_amount"), excessPayment: data.get("excess_payment") } as unknown as typeof records.$inferInsert).where(eq(records.caseNo, caseNo));
+      await db.update(records).set({ paymentMethod: data.get("final_payment_method"), totalAmount: data.get("total_amount"), paidAmount: data.get("paid_amount"), excessPayment: data.get("excess_payment") } as unknown as typeof records.$inferInsert).where(sql`record_id = ${caseNo}`);
 
       // return { success: true, message: 'Record inserted successfully' };
     } catch (error) {
       console.error('Error inserting record:', error);
       return { success: false, error: 'Failed to insert record' };
     }
-    redirect(303, `/?case_no=${caseNo}&case_type=${data.get("case_type")}`);
+    redirect(303, `/?case_type=${data.get("case_type")}`);
 
   }
 } satisfies Actions;

@@ -46,7 +46,11 @@
 		enctype="multipart/form-data"
 		class="flex w-full max-w-md flex-row items-start justify-center space-x-6 rounded border border-gray-300 bg-green-200 px-8 py-6"
 	>
-		<input type="text" name="case_no" value={data.caseNo} hidden />
+		<input type="text" name="case_no" value={data.recordData.caseNo} hidden />
+
+		<input type="text" name="case_type" value={data.recordData.caseType} hidden />
+		<input type="text" name="record_id" value={data.caseNo} hidden />
+
 		<label for="in-img" class="flex flex-col gap-3">
 			<div>
 				<!-- <h2 class="text-center text-lg font-medium text-gray-700">IN Details</h2> -->

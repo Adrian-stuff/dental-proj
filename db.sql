@@ -10,7 +10,8 @@ DROP TABLE IF EXISTS supply CASCADE;
 CREATE TABLE supply (
 	supply_id SERIAL PRIMARY KEY,
 	supply_date DATE NOT NULL,
-	supply_cost DECIMAL NOT NULL
+	supply_cost DECIMAL NOT NULL,
+	supply_description TEXT
 );
 
 -- Table for Case Type
@@ -50,8 +51,18 @@ CREATE TABLE records (
     total_amount DECIMAL(10, 2),
     paid_amount DECIMAL(10, 2),
     excess_payment DECIMAL(10, 2),
+	payment_method TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE records
+ADD COLUMN payment_status TEXT GENERATED ALWAYS AS (
+    CASE 
+        WHEN paid_amount >= total_amount THEN 'paid'
+        ELSE 'unpaid'
+    END
+) STORED;
+CREATE INDEX idx_records_payment_status ON records(payment_status);
 
 -- Table for History
 CREATE TABLE history (

@@ -106,7 +106,10 @@ export const actions = {
     const remark = data.get('remark')?.toString();
     const filterMonth = data.get('filter_month') === 'on';
     const month = data.get('month');
-
+    const patientName = data.get('patient_name')?.toString();
+    const filterPatient = data.get('filter_patient') === 'on';
+    const year = data.get('year')?.toString();
+    const paymentStatus = data.get('payment_status')?.toString();
     let whereConditions = [];
     console.log(data)
     if (caseNo) {
@@ -126,6 +129,16 @@ export const actions = {
     }
     if (filterMonth && month) {
       whereConditions.push(sql`EXTRACT(MONTH FROM created_at) = ${month}`);
+    }
+    if (patientName && filterPatient) {
+      whereConditions.push(sql`patient_name ILIKE ${`%${patientName}%`}`);
+    }
+    if (filterMonth && month && year) {
+      whereConditions.push(sql`EXTRACT(MONTH FROM created_at) = ${month}`);
+      whereConditions.push(sql`EXTRACT(YEAR FROM created_at) = ${year}`);
+    }
+    if (paymentStatus) {
+      whereConditions.push(sql`payment_status = ${paymentStatus}`);
     }
 
     let recordData;
@@ -149,7 +162,7 @@ export const actions = {
     if (recordData.length <= 0) {
       return { success: false, error: "No record found" };
     }
-    return { success: true, data: recordData, clinicName: clinicName != undefined ? clinicName : "", start_date, end_date, remark, caseType, caseNo, month: filterMonth ? month : null };
+    return { success: true, patientName, data: recordData, clinicName: clinicName != undefined ? clinicName : "", start_date, end_date, paymentStatus, remark, caseType, caseNo, month: filterMonth ? month : null };
   },
   clinics: async ({ request }) => {
     const data = await request.formData();
@@ -235,11 +248,10 @@ export const actions = {
         await tx.delete(records).where(eq(records.recordId, caseNoToDelete));
         await tx.delete(history).where(eq(history.historyId, caseNoToDelete));
       });
-      redirect(303, `/`); // Redirect to the desired page after successful deletion                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
-      return { success: true }; // Indicate success
     } catch (error) {
       console.error('Error deleting record:', error);
       return { success: false, error: 'Failed to delete record data' }; // Provide error details
     }
+    redirect(303, `/`); // Redirect to the desired page after successful deletion                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
   }
 } satisfies Actions;

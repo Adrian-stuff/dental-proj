@@ -8,6 +8,16 @@
 
 	let selectedMonth = $state(currentMonth);
 	let selectedYear = $state(currentYear);
+	let selectedDate = $state<string | null>(null); // Add this for exact date
+	let isExactDate = $state(false); // Add this to toggle between month/year and exact date
+
+	// Add this function to handle date changes
+	function handleDateToggle() {
+		isExactDate = !isExactDate;
+		if (!isExactDate) {
+			selectedDate = null;
+		}
+	}
 
 	interface ClientIncome {
 		name: string;
@@ -99,7 +109,29 @@
 
 		<!-- Month Year Picker Form -->
 		<form method="POST" action="?/changeDate" class="flex items-center gap-4 print:hidden">
-			<MonthYearPicker bind:selectedMonth bind:selectedYear />
+			<div class="flex items-center gap-4">
+				<label class="flex items-center gap-2">
+					<input
+						type="checkbox"
+						checked={isExactDate}
+						onchange={handleDateToggle}
+						class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+					/>
+					<span class="text-sm text-gray-700">Exact Date</span>
+				</label>
+
+				{#if isExactDate}
+					<input
+						type="date"
+						name="exact_date"
+						bind:value={selectedDate}
+						class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+					/>
+				{:else}
+					<MonthYearPicker bind:selectedMonth bind:selectedYear />
+				{/if}
+			</div>
+
 			<button
 				type="submit"
 				class="rounded-md bg-indigo-100 px-3 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-200"
@@ -111,10 +143,19 @@
 
 	<!-- Display selected month and year -->
 	<div class="mb-4 w-full text-sm text-gray-500">
-		Showing data for: {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', {
-			month: 'long',
-			year: 'numeric'
-		})}
+		Showing data for:
+		{#if isExactDate && selectedDate}
+			{new Date(selectedDate).toLocaleDateString('en-US', {
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric'
+			})}
+		{:else}
+			{new Date(selectedYear, selectedMonth - 1).toLocaleString('default', {
+				month: 'long',
+				year: 'numeric'
+			})}
+		{/if}
 	</div>
 
 	<div class="flex flex-row gap-6">

@@ -31,6 +31,7 @@
 
 	let selectedMonth = $state(currentMonth);
 	let selectedYear = $state(currentYear);
+	let description = $state(''); // Add this for the description input
 </script>
 
 <div class="container mx-auto rounded-md bg-white p-6 shadow-md">
@@ -72,7 +73,7 @@
 
 	<!-- Add Expense Form -->
 	<form method="POST" action="?/add" class="mb-8" use:enhance>
-		<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+		<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
 			<div>
 				<label for="supply_date" class="block text-sm font-semibold text-gray-700">Date:</label>
 				<input
@@ -92,6 +93,20 @@
 					name="supply_cost"
 					required
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+				/>
+			</div>
+			<div>
+				<label for="description" class="block text-sm font-semibold text-gray-700"
+					>Description:</label
+				>
+				<input
+					type="text"
+					id="description"
+					name="description"
+					required
+					placeholder="Enter expense description"
+					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+					bind:value={description}
 				/>
 			</div>
 		</div>
@@ -134,6 +149,12 @@
 							scope="col"
 							class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 						>
+							Description
+						</th>
+						<th
+							scope="col"
+							class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+						>
 							Cost
 						</th>
 					</tr>
@@ -143,6 +164,9 @@
 						<tr>
 							<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
 								{record.supplyDate}
+							</td>
+							<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
+								{record.supplyDescription || '-'}
 							</td>
 							<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
 								&#8369;{record.supplyCost}

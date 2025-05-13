@@ -40,32 +40,37 @@ export const load: PageServerLoad = async ({ url }) => {
 export const actions = {
   add: async ({ request }) => {
     const data = await request.formData();
-    const date = data.get('supply_date') as string;
-    
+    const supplyDate = data.get('supply_date');
+    const supplyCost = data.get('supply_cost');
+    const description = data.get('description');
+
     try {
-      await db
-        .insert(supply)
-        .values({
-          supplyDate: date,
-          supplyCost: data.get('supply_cost'),
-        } as unknown as typeof supply.$inferInsert);
+      await db.insert(supply).values({
+        supplyDate,
+        supplyCost,
+        description,
+        // ...other fields...
+      });
 
       return {
         success: true,
-        message: 'Record inserted successfully',
+        message: 'Expense added successfully',
       };
     } catch (error) {
-      console.error('Error inserting record:', error);
-      return { success: false, error: 'Failed to insert record' };
+      console.error('Error adding expense:', error);
+      return {
+        success: false,
+        error: 'Failed to add expense',
+      };
     }
   },
-  
+
   changeMonth: async ({ request }) => {
     const data = await request.formData();
     const month = data.get('month');
     const year = data.get('year');
-    
+
     // Redirect to the same page with new query parameters
     throw redirect(303, `?month=${month}&year=${year}`);
-  }
+  },
 } satisfies Actions;

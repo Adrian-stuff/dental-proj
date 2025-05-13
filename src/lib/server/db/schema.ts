@@ -49,7 +49,7 @@ export const supply = pgTable("supply", {
 	supplyId: serial("supply_id").primaryKey(),
 	supplyDate: date("supply_date").notNull(),
 	supplyCost: decimal("supply_cost").notNull(),
-
+	supplyDescription: text("supply_description"),
 });
 
 // Table for Records
@@ -71,6 +71,9 @@ export const records = pgTable("records", {
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow(),
 	remarks: text("remarks"),
+	paymentMethod: text("payment_method"),
+	paymentStatus: text("payment_status"),
+
 });
 
 export const recordsRelations = relations(records, ({ one }) => ({

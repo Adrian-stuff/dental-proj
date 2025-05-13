@@ -25,6 +25,10 @@
 	let success = form?.success ?? false;
 	let message = form?.message ?? '';
 
+	// Add these new state variables
+	let caseTypes = $state(data.caseTypes || []);
+	let newCaseType = $state('');
+
 	$effect(() => {
 		if (isClinicInputFocused && !newClinicSearch) {
 			filteredClinics = clinics;
@@ -282,5 +286,75 @@
 				</button>
 			</div>
 		</form>
+
+		<h2 class="mt-10 text-xl font-semibold text-gray-900">Case Types</h2>
+		<div class="mt-4 flex flex-col gap-4">
+			<!-- Add Case Type Form -->
+			<form
+				method="POST"
+				action="?/addCaseType"
+				class="flex items-end gap-4 rounded-md bg-gray-50 p-4 shadow-sm"
+			>
+				<div class="flex-1">
+					<label for="case_type" class="block text-sm font-medium text-gray-700">
+						New Case Type
+					</label>
+					<div class="mt-1">
+						<input
+							type="text"
+							name="case_type"
+							id="case_type"
+							bind:value={newCaseType}
+							class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+							placeholder="Enter case type"
+							required
+						/>
+					</div>
+				</div>
+				<button
+					type="submit"
+					class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+				>
+					Add Case Type
+				</button>
+			</form>
+
+			<!-- Case Types Table -->
+			<table class="w-lg divide-y divide-gray-200 rounded-md shadow-md">
+				<thead class="bg-gray-50">
+					<tr>
+						<th
+							scope="col"
+							class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+						>
+							Case Type
+						</th>
+						<th scope="col" class="relative px-6 py-3">
+							<span class="sr-only">Delete</span>
+						</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-gray-200 bg-white">
+					{#each caseTypes as caseType}
+						<tr>
+							<td class="px-6 py-2 text-sm font-medium whitespace-nowrap text-gray-900">
+								{caseType.caseType}
+							</td>
+							<td class="px-6 py-2 text-right text-sm font-medium whitespace-nowrap">
+								<form action="?/deleteCaseType" method="post">
+									<input type="hidden" name="case_type_id" value={caseType.caseTypeId} />
+									<button
+										type="submit"
+										class="inline-flex items-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none"
+									>
+										Delete Case Type
+									</button>
+								</form>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	</div>
 </div>

@@ -23,6 +23,14 @@
 	let filterMonth = $state(
 		form != undefined && form?.success && form?.month ? form?.month.length > 0 : false
 	);
+	let filterPatient = $state(
+		form != undefined && form?.success && form?.patientName ? form?.patientName.length > 0 : false
+	);
+	let filterPaymentStatus = $state(
+		form != undefined && form?.success && form?.paymentStatus
+			? form?.paymentStatus.length > 0
+			: false
+	);
 
 	if (form?.success) {
 		table = form.data;
@@ -66,6 +74,10 @@
 		{ value: '11', label: 'November' },
 		{ value: '12', label: 'December' }
 	];
+
+	let selectedYear = $state(new Date().getFullYear());
+
+	const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
 	function handleInputChange(event: Event) {
 		searchClinic = (event.target as HTMLInputElement).value;
@@ -140,9 +152,11 @@
 </script>
 
 <div class="flex flex-col">
-	<div class="m-2 flex flex-wrap items-center gap-4 print:hidden">
-		<form method="POST" action="?/filter" class="flex items-center gap-2">
-			<label class="flex items-center gap-1">
+	<div class="m-2 print:hidden">
+		<form method="POST" action="?/filter">
+			<!-- First Row -->
+			<div class="mb-4 flex flex-wrap gap-4">
+				<!-- Clinic Filter -->
 				<label for="clinic_name" class="relative flex flex-col items-start gap-1">
 					<h1 class="text-sm font-semibold text-gray-700">Clinic</h1>
 					<input
@@ -173,174 +187,248 @@
 						<input type="hidden" name="clinic_name" value={selectedClinic} />
 					{/if}
 				</label>
-			</label>
 
-			<label class="flex items-center gap-1">
-				<input
-					type="checkbox"
-					name="filter_case_type"
-					bind:checked={filterCaseType}
-					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-				/>
-				<label for="case_type" class="flex flex-col items-start gap-1">
-					<h1 class="text-sm font-semibold text-gray-700">Case Type</h1>
-					<select
-						name="case_type"
-						class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-						disabled={!filterCaseType}
-					>
-						{#each data.caseTypes as caseType}
-							{#if form?.success && form.caseType}
-								<option value={caseType.caseType} selected={caseType.caseType === form.caseType}>
-									{caseType.caseType}
-								</option>
-							{:else}
-								<option value={caseType.caseType}>
-									{caseType.caseType}
-								</option>
-							{/if}
-						{/each}
-					</select>
-				</label>
-			</label>
-
-			<label class="flex items-center gap-1">
-				<input
-					type="checkbox"
-					name="filter_case_no"
-					bind:checked={filterCaseNo}
-					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-				/>
-				<label for="case_no" class="flex flex-col items-start gap-1">
-					<h1 class="text-sm font-semibold text-gray-700">Case No</h1>
+				<!-- Patient Name Filter -->
+				<div class="flex items-start gap-2">
 					<input
-						type="number"
-						name="case_no"
-						defaultValue={data.caseNo || (form != undefined ? form?.caseNo : '')}
-						placeholder="Enter Case No"
-						class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-						disabled={!filterCaseNo}
+						type="checkbox"
+						name="filter_patient"
+						bind:checked={filterPatient}
+						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 					/>
-				</label>
-			</label>
+					<label for="patient_name" class="flex flex-col items-start gap-1">
+						<h1 class="text-sm font-semibold text-gray-700">Patient Name</h1>
+						<input
+							type="text"
+							name="patient_name"
+							placeholder="Enter Patient Name"
+							class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+							disabled={!filterPatient}
+						/>
+					</label>
+				</div>
 
-			<label class="flex items-center gap-1">
-				<input
-					type="checkbox"
-					name="filter_remark"
-					bind:checked={filterRemark}
-					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-				/>
-				<label for="remark" class="flex flex-col items-start gap-1">
-					<h1 class="text-sm font-semibold text-gray-700">Remark</h1>
-					<select
-						name="remark"
-						class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-						disabled={!filterRemark}
-					>
-						{#each ['finished', 'pending'] as remark}
-							{#if form?.success}
-								<option value={remark} selected={remark === form.remark}>
-									{remark}
-								</option>
-							{:else}
-								<option value={remark}>
-									{remark}
-								</option>
-							{/if}
-						{/each}
-					</select>
-				</label>
-			</label>
-
-			<label class="flex items-center gap-1">
-				<input
-					type="checkbox"
-					name="filter_start_date"
-					bind:checked={filterDate}
-					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-				/>
-				<label for="start_date" class="flex flex-col items-start gap-1">
-					<h1 class="text-sm font-semibold text-gray-700">Start Date</h1>
+				<!-- Case Type Filter -->
+				<div class="flex items-start gap-2">
 					<input
-						type="date"
-						name="start_date"
-						bind:value={startDate}
-						class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-						disabled={!filterDate}
-						required={filterDate}
+						type="checkbox"
+						name="filter_case_type"
+						bind:checked={filterCaseType}
+						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 					/>
-				</label>
-			</label>
+					<label for="case_type" class="flex flex-col items-start gap-1">
+						<h1 class="text-sm font-semibold text-gray-700">Case Type</h1>
+						<select
+							name="case_type"
+							class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+							disabled={!filterCaseType}
+						>
+							{#each data.caseTypes as caseType}
+								{#if form?.success && form.caseType}
+									<option value={caseType.caseType} selected={caseType.caseType === form.caseType}>
+										{caseType.caseType}
+									</option>
+								{:else}
+									<option value={caseType.caseType}>
+										{caseType.caseType}
+									</option>
+								{/if}
+							{/each}
+						</select>
+					</label>
+				</div>
 
-			<label class="flex items-center gap-1">
-				<label for="end_date" class="flex flex-col items-start gap-1">
-					<h1 class="text-sm font-semibold text-gray-700">End Date</h1>
+				<!-- Case No Filter -->
+				<div class="flex items-start gap-2">
 					<input
-						type="date"
-						name="end_date"
-						bind:value={endDate}
-						class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-						disabled={!filterDate}
-						required={filterDate}
+						type="checkbox"
+						name="filter_case_no"
+						bind:checked={filterCaseNo}
+						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 					/>
-				</label>
-			</label>
+					<label for="case_no" class="flex flex-col items-start gap-1">
+						<h1 class="text-sm font-semibold text-gray-700">Case No</h1>
+						<input
+							type="number"
+							name="case_no"
+							defaultValue={data.caseNo || (form != undefined ? form?.caseNo : '')}
+							placeholder="Enter Case No"
+							class="w-16 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+							disabled={!filterCaseNo}
+						/>
+					</label>
+				</div>
+				<div class="flex items-start gap-2">
+					<input
+						type="checkbox"
+						name="filter_remark"
+						bind:checked={filterRemark}
+						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+					/>
+					<label for="remark" class="flex flex-col items-start gap-1">
+						<h1 class="text-sm font-semibold text-gray-700">Remark</h1>
+						<select
+							name="remark"
+							class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+							disabled={!filterRemark}
+						>
+							{#each ['finished', 'pending'] as remark}
+								{#if form?.success}
+									<option value={remark} selected={remark === form.remark}>
+										{remark.charAt(0).toUpperCase() + remark.slice(1)}
+									</option>
+								{:else}
+									<option value={remark}>
+										{remark.charAt(0).toUpperCase() + remark.slice(1)}
+									</option>
+								{/if}
+							{/each}
+						</select>
+					</label>
+				</div>
 
-			<label class="flex items-center gap-1">
-				<input
-					type="checkbox"
-					name="filter_month"
-					bind:checked={filterMonth}
-					class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-				/>
-				<label for="month" class="flex flex-col items-start gap-1">
-					<h1 class="text-sm font-semibold text-gray-700">Month</h1>
-					<select
-						name="month"
-						class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-						bind:value={selectedMonth}
-						disabled={!filterMonth}
+				<!-- Payment Status Filter -->
+				<div class="flex items-start gap-2">
+					<input
+						type="checkbox"
+						name="filter_payment_status"
+						bind:checked={filterPaymentStatus}
+						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+					/>
+					<label for="payment_status" class="flex flex-col items-start gap-1">
+						<h1 class="text-sm font-semibold text-gray-700">Payment Status</h1>
+						<select
+							name="payment_status"
+							class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+							disabled={!filterPaymentStatus}
+						>
+							{#each ['paid', 'unpaid'] as status}
+								{#if form?.success}
+									<option value={status} selected={status === form.paymentStatus}>
+										{status.charAt(0).toUpperCase() + status.slice(1)}
+									</option>
+								{:else}
+									<option value={status}>
+										{status.charAt(0).toUpperCase() + status.slice(1)}
+									</option>
+								{/if}
+							{/each}
+						</select>
+					</label>
+				</div>
+			</div>
+
+			<!-- Second Row -->
+			<div class="mb-4 flex flex-wrap items-end gap-4">
+				<!-- Remark Filter -->
+
+				<!-- Date Range Filter -->
+				<div class="flex items-start gap-2">
+					<input
+						type="checkbox"
+						name="filter_start_date"
+						bind:checked={filterDate}
+						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+					/>
+					<div class="flex gap-2">
+						<div>
+							<h1 class="text-sm font-semibold text-gray-700">Start Date</h1>
+							<input
+								type="date"
+								name="start_date"
+								bind:value={startDate}
+								class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+								disabled={!filterDate}
+								required={filterDate}
+							/>
+						</div>
+						<div>
+							<h1 class="text-sm font-semibold text-gray-700">End Date</h1>
+							<input
+								type="date"
+								name="end_date"
+								bind:value={endDate}
+								class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+								disabled={!filterDate}
+								required={filterDate}
+							/>
+						</div>
+					</div>
+				</div>
+
+				<!-- Month & Year Filter -->
+				<div class="flex items-start gap-2">
+					<input
+						type="checkbox"
+						name="filter_month"
+						bind:checked={filterMonth}
+						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+					/>
+					<div class="flex flex-col items-start gap-1">
+						<h1 class="text-sm font-semibold text-gray-700">Month & Year</h1>
+						<div class="flex gap-2">
+							<select
+								name="month"
+								class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+								bind:value={selectedMonth}
+								disabled={!filterMonth}
+							>
+								{#each months as { value, label }}
+									<option {value}>{label}</option>
+								{/each}
+							</select>
+							<select
+								name="year"
+								class="w-24 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+								bind:value={selectedYear}
+								disabled={!filterMonth}
+							>
+								{#each years as year}
+									<option value={year}>{year}</option>
+								{/each}
+							</select>
+						</div>
+					</div>
+				</div>
+
+				<!-- Action Buttons -->
+				<div class="flex gap-2">
+					<button
+						type="submit"
+						class="rounded border border-gray-300 bg-blue-500 px-4 py-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none disabled:opacity-50"
+						disabled={!selectedClinic &&
+							!filterCaseType &&
+							!filterCaseNo &&
+							!filterRemark &&
+							!filterDate &&
+							!filterMonth &&
+							!filterPatient &&
+							!filterPaymentStatus}
 					>
-						{#each months as { value, label }}
-							<option {value}>{label}</option>
-						{/each}
-					</select>
-				</label>
-			</label>
-
-			<button
-				class="self-end rounded border border-gray-300 bg-blue-500 p-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
-				type="submit"
-				disabled={!selectedClinic &&
-					!filterCaseType &&
-					!filterCaseNo &&
-					!filterRemark &&
-					!filterDate &&
-					!filterMonth}
-			>
-				QUERY
-			</button>
-			<button
-				class="self-end rounded border border-gray-300 bg-blue-500 p-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-1 focus:outline-none sm:text-sm"
-				onclick={async () => {
-					await goto('/');
-					window.location.reload();
-				}}
-				type="button"
-			>
-				RESET
-			</button>
+						QUERY
+					</button>
+					<button
+						type="button"
+						class="rounded border border-gray-300 bg-gray-500 px-4 py-2 text-white shadow-sm hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 focus:outline-none"
+						onclick={async () => {
+							await goto('/');
+							window.location.reload();
+						}}
+					>
+						RESET
+					</button>
+					<div class="flex flex-col items-center gap-2">
+						<span class="text-sm font-medium text-gray-700">Delete mode</span>
+						<label class="relative inline-flex cursor-pointer items-center">
+							<input type="checkbox" bind:checked={isDeleting} class="peer sr-only" />
+							<div
+								class="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-red-600 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full"
+							></div>
+						</label>
+					</div>
+				</div>
+			</div>
 		</form>
-		<div class="flex flex-col items-center gap-2">
-			<h1 class="text-sm font-medium">Delete mode:</h1>
-			<label class="relative inline-flex cursor-pointer items-center">
-				<input type="checkbox" bind:checked={isDeleting} class="peer sr-only" />
-				<div
-					class="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 peer-focus:outline-none after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white rtl:peer-checked:after:-translate-x-full dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-blue-800"
-				></div>
-			</label>
-		</div>
 	</div>
 
 	<div id="printarea" class="flex flex-col">
@@ -461,16 +549,26 @@
 				</thead>
 				<tbody class="bg-white">
 					{#each paginatedData as row, index}
-						<tr class={`border-gray-300 ${+row.excessPayment >= 0 ? 'bg-blue-100' : 'bg-red-300'}`}>
+						<tr
+							class={`border-gray-300 ${row.paidAmount >= row.totalAmount ? 'bg-blue-100' : 'bg-red-300'}`}
+						>
 							{#each displayedKeys as keyIndex}
 								<td class="border border-gray-300 px-6 py-4 text-gray-900">
-									{#if keyIndex === 11 || keyIndex === 12}
-										<span>&#8369;</span>
-									{/if}
-									{#if keyIndex === 2}
-										<span>{row[Object.keys(table[0])[1]]} -</span>
-									{/if}
-									{row[Object.keys(table[0])[keyIndex]]}
+									<a href={`/details/${row[Object.keys(table[0])[0]]}`}>
+										{#if keyIndex === 11 || keyIndex === 12}
+											<span>&#8369;</span>
+										{/if}
+										{#if keyIndex === 2}
+											<span>{row[Object.keys(table[0])[1]]} -</span>
+										{/if}
+
+										{row[Object.keys(table[0])[keyIndex]]}
+										{#if keyIndex === 15}
+											<span>
+												- {row[Object.keys(table[0])[17]]} - {row[Object.keys(table[0])[16]]}</span
+											>
+										{/if}
+									</a>
 								</td>
 							{/each}
 							<td class="border border-gray-300 px-6 py-4 print:hidden">

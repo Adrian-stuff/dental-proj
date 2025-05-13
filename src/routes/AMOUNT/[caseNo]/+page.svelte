@@ -7,6 +7,8 @@
 	console.log('caseNo', data.recordData);
 	let total_amount: number | undefined = $state(data.recordData?.totalAmount as number);
 	let paid_amount: number | undefined = $state(data.recordData?.paidAmount as number);
+	let payment_method = $state('cash');
+	let other_payment_method = $state('');
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-gray-100">
@@ -16,6 +18,7 @@
 			<label for="total_amount" class="mb-2 block text-sm font-bold text-gray-700">
 				Total Amount
 			</label>
+			<input type="text" name="case_type" value={data.recordData.caseType} hidden />
 			<input
 				type="number"
 				bind:value={total_amount}
@@ -39,6 +42,45 @@
 				class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
 			/>
 		</div>
+		<div class="mb-4">
+			<label for="payment_method" class="mb-2 block text-sm font-bold text-gray-700">
+				Payment Method
+			</label>
+			<select
+				name="payment_method"
+				bind:value={payment_method}
+				class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+				required
+			>
+				<option value="cash">Cash</option>
+				<option value="gcash">GCash</option>
+				<option value="bank">Bank Transfer</option>
+				<option value="others">Others</option>
+			</select>
+		</div>
+
+		{#if payment_method === 'others'}
+			<div class="mb-4">
+				<label for="other_payment_method" class="mb-2 block text-sm font-bold text-gray-700">
+					Specify Payment Method
+				</label>
+				<input
+					type="text"
+					bind:value={other_payment_method}
+					name="other_payment_method"
+					placeholder="Enter payment method"
+					required
+					class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+				/>
+			</div>
+		{/if}
+
+		<input
+			hidden
+			name="final_payment_method"
+			value={payment_method === 'others' ? other_payment_method : payment_method}
+		/>
+
 		<div class="mb-6">
 			<label for="excess_payment" class="mb-2 block text-sm font-bold text-gray-700">
 				Excess Amount

@@ -1,22 +1,27 @@
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { clinics, doctors } from '$lib/server/db/schema';
+import { clinics, doctors, caseTypes } from '$lib/server/db/schema';
 import { desc, eq } from 'drizzle-orm';
 
-export const load: PageServerLoad = async () => {
-  return {
-    doctors: (await db.select().from(doctors).orderBy(desc(doctors.doctorName))).map((doctor) => ({
-      value: doctor.doctorName,
-      label: doctor.doctorName,
-      clinicId: doctor.clinicId
-    })),
-    clinics: (await db.select().from(clinics).orderBy(desc(clinics.clinicName))).map((clinic) => ({
+export const load = (async () => {
+  const doctorsData = (await db.select().from(doctors).orderBy(desc(doctors.doctorName))).map((doctor) => ({
+    value: doctor.doctorName,
+    label: doctor.doctorName,
+    clinicId: doctor.clinicId
+  })),
+    clinicsData = (await db.select().from(clinics).orderBy(desc(clinics.clinicName))).map((clinic) => ({
       value: clinic.clinicName,
       label: clinic.clinicName,
       clinicId: clinic.clinicId
-    }))
+    })),
+    caseTypesData = await db.select().from(caseTypes).orderBy(caseTypes.caseType);
+
+  return {
+    doctors: doctorsData,
+    clinics: clinicsData,
+    caseTypes: caseTypesData
   };
-};
+}) satisfies PageServerLoad;
 
 export const actions = {
   addDoctor: async ({ request }) => {
@@ -130,6 +135,49 @@ export const actions = {
       }
     } else {
       return { success: false, error: 'Clinic ID not provided for deletion' };
+    }
+  },
+  addCaseType: async ({ request }) => {
+    const data = await request.formData();
+    const caseType = data.get('case_type')?.toString();
+
+    if (!caseType) {
+      return { success: false, error: 'Case type is required' };
+    }
+
+    try {
+      await db.insert(caseTypes).values({
+        caseType: caseType,
+        numberOfCases: 0
+      } as unknown as typeof caseTypes.$inferInsert);
+
+      return {
+        success: true,
+        message: 'Case type added successfully'
+      };
+    } catch (error) {
+      console.error('Error adding case type:', error);
+      return { success: false, error: 'Failed to add case type' };
+    }
+  },
+  deleteCaseType: async ({ request }) => {
+    const data = await request.formData();
+    const caseTypeId = data.get('case_type_id')?.toString();
+
+    if (!caseTypeId) {
+      return { success: false, error: 'Case type ID is required' };
+    }
+
+    try {
+      await db.delete(caseTypes).where(eq(caseTypes.caseTypeId, caseTypeId));
+
+      return {
+        success: true,
+        message: 'Case type deleted successfully'
+      };
+    } catch (error) {
+      console.error('Error deleting case type:', error);
+      return { success: false, error: 'Failed to delete case type' };
     }
   }
 } satisfies Actions;
