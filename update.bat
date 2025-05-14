@@ -2,10 +2,13 @@
 
 set repo_url=https://github.com/Adrian-stuff/dental-proj.git
 set project_dir=dental-proj
-set build_command="bun run build"
+set build_command=bun run build
 
 echo Checking for the '%project_dir%' directory...
 if not exist "%project_dir%" (
+    echo Moving batch file up one directory...
+    move "%~f0" ".."
+    cd ..
     echo Cloning the repository...
     git clone "%repo_url%"
     if errorlevel 1 goto error_clone
