@@ -20,6 +20,7 @@ export const caseTypes = pgTable("case_types", {
 	numberOfCases: integer("number_of_cases").notNull(),
 });
 // Table for Clinics
+
 export const clinics = pgTable("clinics", {
 	clinicId: serial("clinic_id").primaryKey(),
 	clinicName: varchar("clinic_name", { length: 255 }).notNull().unique(),
@@ -54,6 +55,7 @@ export const supply = pgTable("supply", {
 });
 
 // Table for Records
+
 export const records = pgTable("records", {
 	recordId: serial("record_id").primaryKey(),
 	caseType: text("case_type"),
@@ -74,7 +76,10 @@ export const records = pgTable("records", {
 	remarks: text("remarks"),
 	paymentMethod: text("payment_method"),
 	paymentStatus: text("payment_status"),
-
+	upperUnit: integer("upper_unit"),
+	lowerUnit: integer("lower_unit"),
+	upperCost: integer("upper_cost"),
+	lowerCost: integer("lower_cost"),
 });
 
 export const recordsRelations = relations(records, ({ one }) => ({

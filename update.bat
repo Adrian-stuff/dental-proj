@@ -20,12 +20,19 @@ if not exist "%project_dir%" (
     if errorlevel 1 goto error_pull
 )
 
-echo Attempting to build the project...
+echo Installing dependencies...
 bun install
+if errorlevel 1 goto error_install
+
+echo Running database migrations...
+bun run drizzle-kit push:pg
+if errorlevel 1 goto error_migration
+
+echo Building the project...
 %build_command%
 if errorlevel 1 goto error_build
 
-echo Done. Project updated and build attempted.
+echo Done. Project updated, migrations applied, and build completed.
 goto end
 
 :error_clone
@@ -34,6 +41,14 @@ goto end
 
 :error_pull
 echo Error during Git pull. Please check your Git repository.
+goto end
+
+:error_install
+echo Error during dependency installation. Please check your network connection and try again.
+goto end
+
+:error_migration
+echo Error during database migration. Please check your database connection and configuration.
 goto end
 
 :error_build
