@@ -29,7 +29,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
         .select()
         .from(records)
         .where(sql`case_no = ${caseNo} AND case_type = ${caseType}`)
-        .orderBy(desc(records.recordId));
+        .orderBy(desc(records.datePickup));
       return {
         data: recordData.length <= 0 ? [] : recordData,
         clinicName: recordData[0]?.clinicName,
@@ -45,7 +45,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
         .select()
         .from(records)
         .where(sql`case_type = ${caseType}`)
-        .orderBy(desc(records.recordId));
+        .orderBy(desc(records.datePickup));
       return {
         data: recordData.length <= 0 ? [] : recordData,
         clinicName: recordData[0]?.clinicName,
@@ -62,7 +62,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
         .select()
         .from(records)
         .where(sql`clinic_name = ${clinicName}`)
-        .orderBy(desc(records.recordId));
+        .orderBy(desc(records.datePickup));
       return {
         data: recordData.length <= 0 ? [] : recordData,
         clinicName: clinicName,
@@ -75,7 +75,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
       };
     } else {
-      let recordData = await db.select().from(records).orderBy(desc(records.recordId));
+      let recordData = await db.select().from(records).orderBy(desc(records.datePickup));
       return {
         data: recordData.length <= 0 ? [] : recordData,
         clinicName: null,
@@ -175,10 +175,10 @@ export const actions = {
           .select()
           .from(records)
           .where(sql`clinic_name = ${clinicName}`)
-          .orderBy(desc(records.recordId));
+          .orderBy(desc(records.datePickup));
       }
       else {
-        recordData = await db.select().from(records).orderBy(desc(records.recordId));
+        recordData = await db.select().from(records).orderBy(desc(records.datePickup));
       }
     } catch (error) {
       console.error("Database query error:", error);

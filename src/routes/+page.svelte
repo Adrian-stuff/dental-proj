@@ -132,8 +132,10 @@
 
 	let customerName = form?.success ? form.clinicName : data.clinicName;
 
-	let displayedKeys = [3, 5, 9, 2, 10, 11, 12, 15];
-
+	let displayedKeys =
+		(form !== undefined && form?.success) || data.hasQuery
+			? [3, 5, 9, 2, 10, 11, 12, 15]
+			: [3, 5, 8, 9, 2, 10, 11, 12, 15];
 	// Pagination variables
 	let currentPage = $state(1);
 	let itemsPerPage = $state(10);
@@ -603,6 +605,13 @@
 									class="inline-block rounded bg-yellow-400 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-yellow-600"
 								>
 									AMOUNT
+								</a>
+								<a
+									aria-label="out"
+									href={`/EDIT/${row[Object.keys(table[0])[0]]}`}
+									class="inline-block rounded bg-yellow-400 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-yellow-600"
+								>
+									EDIT
 								</a>
 							</td>
 							{#if isDeleting}

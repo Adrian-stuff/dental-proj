@@ -18,6 +18,7 @@ if not exist "%project_dir%" (
 )
 
 echo Attempting to build the project...
+bun install
 %build_command%
 if errorlevel 1 goto error_build
 
