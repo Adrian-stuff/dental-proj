@@ -338,7 +338,7 @@
 							scope="col"
 							class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 						>
-							Case Typeas
+							Case Type
 						</th>
 						<th scope="col" class="relative px-6 py-3">
 							<span class="sr-only">Delete</span>
@@ -348,73 +348,10 @@
 				<tbody class="divide-y divide-gray-200 bg-white">
 					{#each caseTypes as caseType}
 						<tr>
-							<td class="px-6 py-2 text-sm font-medium text-gray-900">
-								<div class="flex flex-col gap-2">
-									<div class="flex items-center justify-between">
-										<span>{caseType.caseType}</span>
-										<button
-											type="button"
-											class="ml-2 inline-flex items-center rounded-md border border-transparent bg-indigo-100 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-200 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
-											onclick={() => toggleFieldInput(caseType)}
-										>
-											{selectedCaseType?.caseTypeId === caseType.caseTypeId
-												? 'Hide Fields'
-												: 'Add Field'}
-										</button>
-									</div>
-
-									<!-- Field input and existing fields -->
-									{#if selectedCaseType?.caseTypeId === caseType.caseTypeId}
-										<div class="mt-2 border-t pt-2">
-											<form method="POST" action="?/addField" class="flex items-center gap-2">
-												<input type="hidden" name="case_type_id" value={caseType.caseTypeId} />
-												<input
-													type="text"
-													name="field_name"
-													bind:value={newField}
-													class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-													placeholder="Enter field name"
-													required
-												/>
-												<button
-													type="submit"
-													class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-												>
-													Add Field
-												</button>
-											</form>
-
-											<!-- Display existing fields -->
-											{#if caseType.fields?.length > 0}
-												<div class="mt-2 flex flex-wrap gap-2">
-													{#each caseType.fields as field}
-														<div
-															class="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs"
-														>
-															<span>{field}</span>
-															<form method="POST" action="?/deleteField" class="inline">
-																<input
-																	type="hidden"
-																	name="case_type_id"
-																	value={caseType.caseTypeId}
-																/>
-																<input type="hidden" name="field_name" value={field} />
-																<button
-																	type="submit"
-																	class="ml-1 text-gray-400 hover:text-gray-600"
-																>
-																	×
-																</button>
-															</form>
-														</div>
-													{/each}
-												</div>
-											{/if}
-										</div>
-									{/if}
-								</div>
+							<td class="px-6 py-2 text-sm font-medium whitespace-nowrap text-gray-900">
+								{caseType.caseType}
 							</td>
-							<td class="px-6 py-2 text-right text-sm font-medium">
+							<td class="px-6 py-2 text-right text-sm font-medium whitespace-nowrap">
 								<form action="?/deleteCaseType" method="post">
 									<input type="hidden" name="case_type_id" value={caseType.caseTypeId} />
 									<button

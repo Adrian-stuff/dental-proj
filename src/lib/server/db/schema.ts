@@ -18,7 +18,6 @@ export const caseTypes = pgTable("case_types", {
 	caseTypeId: serial("case_type_id").primaryKey(),
 	caseType: varchar("case_type_name", { length: 255 }).notNull(),
 	numberOfCases: integer("number_of_cases").notNull(),
-	fields: varchar("fields").array().notNull(),
 });
 // Table for Clinics
 export const clinics = pgTable("clinics", {
