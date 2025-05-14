@@ -56,15 +56,12 @@ export const actions = {
       await db
         .update(records)
         .set({
-          caseType: formData.get('caseType')?.toString(),
           doctorName: formData.get('doctorName')?.toString(),
           clinicName: formData.get('clinicName')?.toString(),
           patientName: formData.get('patientName')?.toString(),
           description: formData.get('description')?.toString(),
           remarks: formData.get('remarks')?.toString(),
-          totalAmount: parseFloat(formData.get('totalAmount')?.toString() || '0'),
-          paidAmount: parseFloat(formData.get('paidAmount')?.toString() || '0'),
-          paymentMethod: formData.get('paymentMethod')?.toString(),
+
         } as unknown as typeof records.$inferInsert)
         .where(sql`record_id = ${recordId}`);
 

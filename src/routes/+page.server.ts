@@ -164,32 +164,32 @@ export const actions = {
     }
     return { success: true, patientName, data: recordData, clinicName: clinicName != undefined ? clinicName : "", start_date, end_date, paymentStatus, remark, caseType, caseNo, month: filterMonth ? month : null };
   },
-  clinics: async ({ request }) => {
-    const data = await request.formData();
-    const clinicName = data.get('clinic_name')?.toString();
+  // clinics: async ({ request }) => {
+  //   const data = await request.formData();
+  //   const clinicName = data.get('clinic_name')?.toString();
 
-    let recordData;
-    try {
-      if (clinicName) {
-        recordData = await db
-          .select()
-          .from(records)
-          .where(sql`clinic_name = ${clinicName}`)
-          .orderBy(desc(records.datePickup));
-      }
-      else {
-        recordData = await db.select().from(records).orderBy(desc(records.datePickup));
-      }
-    } catch (error) {
-      console.error("Database query error:", error);
-      return { success: false, error: "Failed to retrieve data" };
-    }
-    return {
-      success: true,
-      data: recordData,
-      clinicName: clinicName
-    };
-  },
+  //   let recordData;
+  //   try {
+  //     if (clinicName) {
+  //       recordData = await db
+  //         .select()
+  //         .from(records)
+  //         .where(sql`clinic_name = ${clinicName}`)
+  //         .orderBy(desc(records.datePickup));
+  //     }
+  //     else {
+  //       recordData = await db.select().from(records).orderBy(desc(records.datePickup));
+  //     }
+  //   } catch (error) {
+  //     console.error("Database query error:", error);
+  //     return { success: false, error: "Failed to retrieve data" };
+  //   }
+  //   return {
+  //     success: true,
+  //     data: recordData,
+  //     clinicName: clinicName
+  //   };
+  // },
   date: async ({ request }) => {
     const data = await request.formData();
     const start_date = data.get('start_date')?.toString();

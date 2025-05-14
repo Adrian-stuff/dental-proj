@@ -104,23 +104,6 @@
 		<input type="hidden" name="recordId" value={record.recordId} />
 
 		<div class="grid gap-6 md:grid-cols-2">
-			<!-- Case Type -->
-			<div>
-				<label for="case_type" class="mb-2 block text-sm font-bold text-gray-700">
-					Case Type
-					<select
-						name="caseType"
-						value={record.caseType}
-						required
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-					>
-						{#each data?.caseTypes as caseType}
-							<option value={caseType.caseType}>{caseType.caseType}</option>
-						{/each}
-					</select>
-				</label>
-			</div>
-
 			<!-- Clinic Name with Dropdown -->
 			<div class="relative">
 				<label for="clinic_name" class="mb-2 block text-sm font-bold text-gray-700">
@@ -192,84 +175,57 @@
 				<input type="hidden" name="doctorName" value={selectedDoctor?.value} />
 			</div>
 
-			<!-- Total Amount -->
+			<!-- Patient Name -->
 			<div>
-				<label for="totalAmount" class="block text-sm font-medium text-gray-700">Total Amount</label
-				>
-				<input
-					type="number"
-					id="totalAmount"
-					name="totalAmount"
-					value={record.totalAmount}
-					step="0.01"
-					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-				/>
+				<label for="patient_name" class="mb-2 block text-sm font-bold text-gray-700">
+					Patient Name
+					<input
+						type="text"
+						id="patient_name"
+						name="patientName"
+						value={record.patientName}
+						required
+						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+						placeholder="Patient name"
+					/>
+				</label>
 			</div>
 
-			<!-- Paid Amount -->
+			<!-- Description -->
 			<div>
-				<label for="paidAmount" class="block text-sm font-medium text-gray-700">Paid Amount</label>
-				<input
-					type="number"
-					id="paidAmount"
-					name="paidAmount"
-					value={record.paidAmount}
-					step="0.01"
+				<label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+				<textarea
+					id="description"
+					name="description"
+					rows="3"
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-				/>
+					>{record.description}</textarea
+				>
 			</div>
 
-			<!-- Payment Method -->
+			<!-- Remarks -->
 			<div>
-				<label for="paymentMethod" class="block text-sm font-medium text-gray-700"
-					>Payment Method</label
-				>
+				<label for="remarks" class="block text-sm font-medium text-gray-700">Remarks</label>
 				<select
-					id="paymentMethod"
-					name="paymentMethod"
-					value={record.paymentMethod}
+					id="remarks"
+					name="remarks"
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+					value={record.remarks || 'pending'}
 				>
-					<option value="cash">Cash</option>
-					<option value="gcash">GCash</option>
-					<option value="bank">Bank Transfer</option>
-					<option value="others">Others</option>
+					<option value="pending">Pending</option>
+					<option value="finished">Finished</option>
 				</select>
 			</div>
-		</div>
 
-		<!-- Description -->
-		<div>
-			<label for="description" class="block text-sm font-medium text-gray-700">Description</label>
-			<textarea
-				id="description"
-				name="description"
-				rows="3"
-				class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-				>{record.description}</textarea
-			>
-		</div>
-
-		<!-- Remarks -->
-		<div>
-			<label for="remarks" class="block text-sm font-medium text-gray-700">Remarks</label>
-			<textarea
-				id="remarks"
-				name="remarks"
-				rows="2"
-				class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-				>{record.remarks}</textarea
-			>
-		</div>
-
-		<!-- Submit Button -->
-		<div class="flex justify-end">
-			<button
-				type="submit"
-				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-			>
-				Update Record
-			</button>
+			<!-- Submit Button -->
+			<div class="flex justify-end">
+				<button
+					type="submit"
+					class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+				>
+					Update Record
+				</button>
+			</div>
 		</div>
 	</form>
 </div>
