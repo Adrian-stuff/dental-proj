@@ -25,7 +25,7 @@ bun install
 if errorlevel 1 goto error_install
 
 echo Running database migrations...
-bun run drizzle-kit push:pg
+bun drizzle-kit push
 if errorlevel 1 goto error_migration
 
 echo Building the project...

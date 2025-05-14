@@ -13,6 +13,10 @@ import {
 	time,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm/relations";
+import { db } from ".";
+
+
+
 
 export const caseTypes = pgTable("case_types", {
 	caseTypeId: serial("case_type_id").primaryKey(),
@@ -107,4 +111,5 @@ export const history = pgTable("history", {
 	imageData: bytea("image_data").notNull(),
 	recordId: integer("record_id").notNull(), // Foreign key to records table
 });
+
 

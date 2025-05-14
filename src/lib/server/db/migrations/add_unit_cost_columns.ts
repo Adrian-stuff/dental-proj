@@ -1,13 +1,7 @@
 import { sql } from 'drizzle-orm';
 
 export async function up(db: any) {
-  await db.execute(sql`
-        ALTER TABLE records
-        ADD COLUMN IF NOT EXISTS upper_unit INTEGER,
-        ADD COLUMN IF NOT EXISTS lower_unit INTEGER,
-        ADD COLUMN IF NOT EXISTS upper_cost INTEGER,
-        ADD COLUMN IF NOT EXISTS lower_cost INTEGER;
-    `);
+
 }
 
 export async function down(db: any) {
