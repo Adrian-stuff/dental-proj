@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from '../$types';
 import { db } from '$lib/server/db';
 import { clinics, doctors, history, records, supply } from '$lib/server/db/schema';
-import { desc, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { redirect } from '@sveltejs/kit';
 
 const formatDate = (date: Date): string => {
@@ -43,14 +43,13 @@ export const actions = {
     const supplyDate = data.get('supply_date');
     const supplyCost = data.get('supply_cost');
     const description = data.get('description');
-
+    console.log(data)
     try {
       await db.insert(supply).values({
         supplyDate,
         supplyCost,
-        description,
-        // ...other fields...
-      });
+        supplyDescription: description,
+      } as typeof supply.$inferInsert);
 
       return {
         success: true,
@@ -72,5 +71,32 @@ export const actions = {
 
     // Redirect to the same page with new query parameters
     throw redirect(303, `?month=${month}&year=${year}`);
+  },
+
+  deleteExpenses: async ({ request }) => {
+    const data = await request.formData();
+    const supplyId = data.get('supply_id');
+
+    if (!supplyId) {
+      return {
+        success: false,
+        error: 'Supply ID is required',
+      };
+    }
+
+    try {
+      await db.delete(supply).where(eq(supply.supplyId, parseInt(supplyId.toString())));
+
+      return {
+        success: true,
+        message: 'Expense deleted successfully',
+      };
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      return {
+        success: false,
+        error: 'Failed to delete expense',
+      };
+    }
   },
 } satisfies Actions;

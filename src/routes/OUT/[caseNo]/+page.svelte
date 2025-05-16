@@ -3,6 +3,7 @@
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+	const { record } = data;
 
 	let date: string | undefined = $state();
 	let time: string | undefined = $state();
@@ -37,19 +38,20 @@
 </script>
 
 <div class="bg-white-100 flex flex-col items-center justify-center rounded-md p-8">
-	<h1 class="mb-4 text-2xl font-semibold">
-		OUT Case No: {data.recordData.caseType} - {data.recordData.caseNo}
-	</h1>
+	<h1 class="mb-4 text-2xl font-semibold">Record Details</h1>
+	<div class="mb-4 text-gray-600">
+		<p>Patient: {record.patientName}</p>
+		<p>Doctor: {record.doctorName}</p>
+		<p>Clinic: {record.clinicName}</p>
+	</div>
 
 	<form
 		method="POST"
 		enctype="multipart/form-data"
 		class="flex w-full max-w-md flex-col items-start justify-center space-y-6 rounded border border-gray-300 bg-red-100 px-8 py-6"
 	>
-		<input type="text" name="record_id" value={data.caseNo} hidden />
-		<input type="text" name="case_no" value={data.recordData.caseNo} hidden />
+		<input type="hidden" name="recordId" value={record.recordId} />
 
-		<input type="text" name="case_type" value={data.recordData.caseType} hidden />
 		<label for="date" class="w-full">
 			<span class="block text-sm font-medium text-gray-600">OUT Date</span>
 			<input
@@ -97,9 +99,7 @@
 				name="finished"
 				class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 			/>
-			<label for="mark-finished" class="text-sm font-medium text-gray-700">
-				Mark as Finished
-			</label>
+			<label for="finished" class="text-sm font-medium text-gray-700"> Mark as Finished </label>
 		</div>
 
 		<div class="mt-4 flex w-full justify-center">

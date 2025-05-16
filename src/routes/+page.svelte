@@ -1,637 +1,490 @@
 <script lang="ts">
-	import { redirect } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
-	import { goto } from '$app/navigation';
 	import { formatDate, generateRecordsSummary, getCurrentDateTime, getRecordDateRange } from '$lib';
 
-	let { data, form }: PageProps = $props();
-	let table = $state(data.data);
-	let error = $state(false);
+	const { data }: PageProps = $props();
+	// Filter states
+	let filters = $state({
+		clinic: false,
+		caseType: false,
+		caseNo: false,
+		patient: false,
+		remark: false,
+		payment: false,
+		date: false,
+		month: false
+	});
 
-	let filterCaseType = $state(
-		form != undefined && form?.success && form?.caseType ? form?.caseType.length > 0 : false
-	);
-	let filterCaseNo = $state(
-		form != undefined && form?.success && form?.caseNo ? form?.caseNo.length > 0 : false
-	);
-	let filterRemark = $state(
-		form != undefined && form?.success && form?.remark ? form?.remark.length > 0 : false
-	);
-	let filterDate = $state(
-		form != undefined && form?.success && form?.start_date ? form?.start_date.length > 0 : false
-	);
-	let filterMonth = $state(
-		form != undefined && form?.success && form?.month ? form?.month.length > 0 : false
-	);
-	let filterPatient = $state(
-		form != undefined && form?.success && form?.patientName ? form?.patientName.length > 0 : false
-	);
-	let filterPaymentStatus = $state(
-		form != undefined && form?.success && form?.paymentStatus
-			? form?.paymentStatus.length > 0
-			: false
-	);
-
-	if (form?.success) {
-		table = form.data;
-		if (form.data.length === 0) {
-			error = true;
-		}
-	} else if (form !== undefined && form?.success === false) {
-		error = true;
-	}
-	console.log(data.data);
-	let selectedClinic = $state<string | null>(
-		form != undefined && form.success ? form.clinicName : data.clinicName || ''
-	);
-	let startDate: string | null = $state(form != undefined && form.success ? form.start_date : null);
-	let endDate: string | null = $state(form != undefined && form.success ? form.end_date : null);
-	let selectedMonth = $state(
-		form?.success ? form.month : (new Date().getMonth() + 1).toString().padStart(2, '0')
-	);
-	let searchClinic = $state(
-		form != undefined && form.success ? form.clinicName : data.clinicName || ''
-	);
-	let isDropdownOpen = $state(false);
-	let isDeleting = $state(false);
+	// Search states
+	let clinicSearch = $state('');
 	let filteredClinics = $derived(
-		data?.clinics?.filter((clinic) =>
-			clinic.label.toLowerCase().includes(searchClinic.toLowerCase())
-		) || []
+		data.clinics?.filter((c) => c.clinicName.toLowerCase().includes(clinicSearch.toLowerCase()))
 	);
 
-	const months = [
-		{ value: '01', label: 'January' },
-		{ value: '02', label: 'February' },
-		{ value: '03', label: 'March' },
-		{ value: '04', label: 'April' },
-		{ value: '05', label: 'May' },
-		{ value: '06', label: 'June' },
-		{ value: '07', label: 'July' },
-		{ value: '08', label: 'August' },
-		{ value: '09', label: 'September' },
-		{ value: '10', label: 'October' },
-		{ value: '11', label: 'November' },
-		{ value: '12', label: 'December' }
-	];
-
+	// Date and month states
+	let startDate = $state('');
+	let endDate = $state('');
+	let selectedMonth = $state(new Date().getMonth() + 1);
 	let selectedYear = $state(new Date().getFullYear());
 
-	const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
+	// Add state for selected clinic
+	let selectedClinicName = $state('');
 
-	function handleInputChange(event: Event) {
-		searchClinic = (event.target as HTMLInputElement).value;
-		isDropdownOpen = true;
-	}
-
-	function selectClinic(clinicValue: string) {
-		selectedClinic = clinicValue;
-		searchClinic = data?.clinics?.find((c) => c.value === clinicValue)?.label || '';
-		isDropdownOpen = false;
-	}
-
-	function handleBlur() {
-		// Keep dropdown open briefly to allow clicks
-		setTimeout(() => {
-			isDropdownOpen = false;
-		}, 150);
-	}
-
-	let sortColumn = $state<number | null>(null);
-	let sortDirection = $state<'asc' | 'desc'>('asc');
-
-	function sortTable(columnIndex: number) {
-		if ([3, 5, 2, 11, 12].includes(columnIndex)) {
-			if (sortColumn === columnIndex) {
-				sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-			} else {
-				sortColumn = columnIndex;
-				sortDirection = 'asc';
-			}
-
-			table = [...table].sort((a, b) => {
-				const key = Object.keys(a)[columnIndex];
-				const valueA = a[key];
-				const valueB = b[key];
-
-				let comparison = 0;
-				if (typeof valueA === 'string' && typeof valueB === 'string') {
-					comparison = valueA.localeCompare(valueB);
-				} else if (typeof valueA === 'number' && typeof valueB === 'number') {
-					comparison = valueA - valueB;
-				} else if (valueA < valueB) {
-					comparison = -1;
-				} else if (valueA > valueB) {
-					comparison = 1;
-				}
-
-				return sortDirection === 'asc' ? comparison : comparison * -1;
-			});
+	// Show all clinics derived state
+	let showAllClinics = $derived(filters.clinic && !selectedClinicName && clinicSearch.length === 0);
+	let selectedClinicId = $state(null);
+	// Filter handler functions
+	function handleMonthFilter() {
+		if (filters.month) {
+			const date = new Date(selectedYear, selectedMonth - 1, 1);
+			const lastDay = new Date(selectedYear, selectedMonth, 0);
+			startDate = date.toISOString().split('T')[0];
+			endDate = lastDay.toISOString().split('T')[0];
 		}
 	}
 
-	let customerName = form?.success ? form.clinicName : data.clinicName;
+	$effect(() => {
+		if (filters.month) handleMonthFilter();
+	});
+	console.log(data);
 
-	let displayedKeys =
-		(form !== undefined && form?.success) || data.hasQuery
-			? [3, 5, 9, 2, 10, 11, 12, 15]
-			: [3, 5, 8, 9, 2, 10, 11, 12, 15];
-	// Pagination variables
-	let currentPage = $state(1);
-	let itemsPerPage = $state(10);
-	let totalPages = $derived(Math.ceil(table.length / itemsPerPage));
-
-	// Calculate paginated data
-	let paginatedData = $derived(
-		table.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+	// Get clinic name for header
+	let customerName = $derived(
+		Object.keys(data.filters).length > 0 ? data.records[0].clinicName : null
 	);
 
-	function changePage(page: number) {
-		if (page >= 1 && page <= totalPages) {
-			currentPage = page;
+	// Add function to handle clinic selection
+	function handleClinicSelect(clinic: { clinicId: number; clinicName: string }) {
+		selectedClinicName = clinic.clinicName;
+		clinicSearch = clinic.clinicName;
+		selectedClinicId = clinic.clinicId;
+	}
+
+	// Pagination states
+	let currentPage = $state(1);
+	let recordsPerPage = $state(10);
+
+	// Calculate pagination values
+	let totalPages = $derived(Math.ceil((data.records?.length || 0) / recordsPerPage));
+	let paginatedRecords = $derived(
+		data.records?.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage) || []
+	);
+
+	// Pagination controls
+	function nextPage() {
+		if (currentPage < totalPages) currentPage++;
+	}
+
+	function prevPage() {
+		if (currentPage > 1) currentPage--;
+	}
+
+	function goToPage(page: number) {
+		currentPage = page;
+	}
+
+	// Delete state
+	let showDelete = $state(false);
+
+	// Add delete handler
+	function handleDelete(recordId: number) {
+		if (confirm('Are you sure you want to delete this record?')) {
+			// TODO: Implement delete functionality
+			console.log('Delete record:', recordId);
 		}
 	}
 </script>
 
-<div class="flex flex-col">
-	<div class="m-2 print:hidden">
-		<form method="POST" action="?/filter">
-			<!-- First Row -->
-			<div class="mb-4 flex flex-wrap gap-4">
+<!-- Filter Form -->
+<div class="w-full bg-gray-50 p-3 print:hidden">
+	<form method="GET" class="mx-auto max-w-7xl">
+		<div class="rounded-lg bg-white p-4 shadow-sm">
+			<!-- Filter Grid -->
+			<div class="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4 lg:grid-cols-6">
 				<!-- Clinic Filter -->
-				<label for="clinic_name" class="relative flex flex-col items-start gap-1">
-					<h1 class="text-sm font-semibold text-gray-700">Clinic</h1>
-					<input
-						type="text"
-						placeholder="Search Clinic"
-						bind:value={searchClinic}
-						oninput={handleInputChange}
-						onfocus={() => (isDropdownOpen = true)}
-						onblur={handleBlur}
-						class="w-48 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-					/>
-					{#if isDropdownOpen && filteredClinics.length > 0}
-						<div
-							class="absolute top-full left-0 z-10 mt-1 w-48 rounded border border-gray-300 bg-white shadow-md"
-						>
-							{#each filteredClinics as clinic}
-								<button
-									type="button"
-									class="block w-full p-2 text-left transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-indigo-50 focus:outline-none"
-									onclick={() => selectClinic(clinic.value)}
+				<div>
+					<label class="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
+						<input
+							type="checkbox"
+							bind:checked={filters.clinic}
+							class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600"
+						/>
+						Clinic
+					</label>
+					{#if filters.clinic}
+						<div class="relative mt-1">
+							<input
+								type="text"
+								bind:value={clinicSearch}
+								placeholder="Search clinic..."
+								class="w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+								onfocus={() => {
+									selectedClinicName = '';
+									clinicSearch = '';
+								}}
+							/>
+							<input type="text" name="clinic_id" bind:value={selectedClinicId} hidden />
+							{#if showAllClinics || (clinicSearch && filteredClinics.length > 0 && !selectedClinicName)}
+								<div
+									class="absolute z-10 mt-0.5 max-h-40 w-full overflow-auto rounded-md border bg-white shadow-lg"
 								>
-									{clinic.label}
-								</button>
-							{/each}
+									{#each showAllClinics ? data.clinics : filteredClinics as clinic}
+										<button
+											type="submit"
+											value={clinic.clinicId}
+											class="w-full p-1.5 text-left text-xs hover:bg-gray-50"
+											onclick={() => handleClinicSelect(clinic)}
+										>
+											{clinic.clinicName}
+										</button>
+									{/each}
+								</div>
+							{/if}
 						</div>
 					{/if}
-					{#if selectedClinic}
-						<input type="hidden" name="clinic_name" value={selectedClinic} />
-					{/if}
-				</label>
-
-				<!-- Patient Name Filter -->
-				<div class="flex items-start gap-2">
-					<input
-						type="checkbox"
-						name="filter_patient"
-						bind:checked={filterPatient}
-						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-					/>
-					<label for="patient_name" class="flex flex-col items-start gap-1">
-						<h1 class="text-sm font-semibold text-gray-700">Patient Name</h1>
-						<input
-							type="text"
-							name="patient_name"
-							placeholder="Enter Patient Name"
-							class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-							disabled={!filterPatient}
-						/>
-					</label>
 				</div>
 
-				<!-- Case Type Filter -->
-				<div class="flex items-start gap-2">
-					<input
-						type="checkbox"
-						name="filter_case_type"
-						bind:checked={filterCaseType}
-						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-					/>
-					<label for="case_type" class="flex flex-col items-start gap-1">
-						<h1 class="text-sm font-semibold text-gray-700">Case Type</h1>
-						<select
-							name="case_type"
-							class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-							disabled={!filterCaseType}
-						>
-							{#each data.caseTypes as caseType}
-								{#if form?.success && form.caseType}
-									<option value={caseType.caseType} selected={caseType.caseType === form.caseType}>
-										{caseType.caseType}
-									</option>
-								{:else}
-									<option value={caseType.caseType}>
-										{caseType.caseType}
-									</option>
-								{/if}
-							{/each}
-						</select>
-					</label>
-				</div>
-
-				<!-- Case No Filter -->
-				<div class="flex items-start gap-2">
-					<input
-						type="checkbox"
-						name="filter_case_no"
-						bind:checked={filterCaseNo}
-						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-					/>
-					<label for="case_no" class="flex flex-col items-start gap-1">
-						<h1 class="text-sm font-semibold text-gray-700">Case No</h1>
-						<input
-							type="number"
-							name="case_no"
-							defaultValue={data.caseNo || (form != undefined ? form?.caseNo : '')}
-							placeholder="Enter Case No"
-							class="w-16 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-							disabled={!filterCaseNo}
-						/>
-					</label>
-				</div>
-				<div class="flex items-start gap-2">
-					<input
-						type="checkbox"
-						name="filter_remark"
-						bind:checked={filterRemark}
-						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-					/>
-					<label for="remark" class="flex flex-col items-start gap-1">
-						<h1 class="text-sm font-semibold text-gray-700">Remark</h1>
-						<select
-							name="remark"
-							class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-							disabled={!filterRemark}
-						>
-							{#each ['finished', 'pending'] as remark}
-								{#if form?.success}
-									<option value={remark} selected={remark === form.remark}>
-										{remark.charAt(0).toUpperCase() + remark.slice(1)}
-									</option>
-								{:else}
-									<option value={remark}>
-										{remark.charAt(0).toUpperCase() + remark.slice(1)}
-									</option>
-								{/if}
-							{/each}
-						</select>
-					</label>
-				</div>
-
-				<!-- Payment Status Filter -->
-				<div class="flex items-start gap-2">
-					<input
-						type="checkbox"
-						name="filter_payment_status"
-						bind:checked={filterPaymentStatus}
-						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-					/>
-					<label for="payment_status" class="flex flex-col items-start gap-1">
-						<h1 class="text-sm font-semibold text-gray-700">Payment Status</h1>
-						<select
-							name="payment_status"
-							class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-							disabled={!filterPaymentStatus}
-						>
-							{#each ['paid', 'unpaid'] as status}
-								{#if form?.success}
-									<option value={status} selected={status === form.paymentStatus}>
-										{status.charAt(0).toUpperCase() + status.slice(1)}
-									</option>
-								{:else}
-									<option value={status}>
-										{status.charAt(0).toUpperCase() + status.slice(1)}
-									</option>
-								{/if}
-							{/each}
-						</select>
-					</label>
-				</div>
+				<!-- Other Filters - Reuse the same pattern -->
+				{#each ['Case Type', 'Case Number', 'Patient Name', 'Payment Status', 'Remarks'] as filterName}
+					<div>
+						<label class="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
+							<input
+								type="checkbox"
+								bind:checked={filters[filterName.toLowerCase().replace(' ', '')]}
+								class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600"
+							/>
+							{filterName}
+						</label>
+						{#if filters[filterName.toLowerCase().replace(' ', '')]}
+							{#if filterName === 'Case Type'}
+								<select
+									name="case_type_id"
+									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
+								>
+									{#each data.caseTypes as type}
+										<option value={type.caseTypeId}>{type.caseTypeName}</option>
+									{/each}
+								</select>
+							{:else if filterName === 'Payment Status'}
+								<select
+									name="payment_status"
+									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
+								>
+									<option value="paid">Paid</option>
+									<option value="unpaid">Unpaid</option>
+								</select>
+							{:else if filterName === 'Remarks'}
+								<select
+									name="remarks"
+									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
+								>
+									<option value="pending">Pending</option>
+									<option value="finished">Finished</option>
+								</select>
+							{:else}
+								<input
+									type={filterName === 'Case Number' ? 'number' : 'text'}
+									name={filterName.toLowerCase().replace(' ', '_')}
+									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+								/>
+							{/if}
+						{/if}
+					</div>
+				{/each}
 			</div>
 
-			<!-- Second Row -->
-			<div class="mb-4 flex flex-wrap items-end gap-4">
-				<!-- Remark Filter -->
-
-				<!-- Date Range Filter -->
-				<div class="flex items-start gap-2">
-					<input
-						type="checkbox"
-						name="filter_start_date"
-						bind:checked={filterDate}
-						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-					/>
-					<div class="flex gap-2">
-						<div>
-							<h1 class="text-sm font-semibold text-gray-700">Start Date</h1>
+			<!-- Date Range Section -->
+			<div class="mt-4 grid grid-cols-1 gap-4 border-t border-gray-100 pt-4 md:grid-cols-4">
+				<!-- Date Filters -->
+				<div class="flex items-start gap-4">
+					<label class="inline-flex items-center gap-2">
+						<input
+							type="checkbox"
+							bind:checked={filters.date}
+							class="h-3.5 w-3.5 rounded text-indigo-600"
+						/>
+						<span class="text-xs font-medium text-gray-700">Date Range</span>
+					</label>
+					{#if filters.date}
+						<div class="flex gap-2">
 							<input
 								type="date"
 								name="start_date"
 								bind:value={startDate}
-								class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-								disabled={!filterDate}
-								required={filterDate}
+								class="w-auto rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
 							/>
-						</div>
-						<div>
-							<h1 class="text-sm font-semibold text-gray-700">End Date</h1>
 							<input
 								type="date"
 								name="end_date"
 								bind:value={endDate}
-								class="rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-								disabled={!filterDate}
-								required={filterDate}
+								class="w-auto rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
 							/>
 						</div>
-					</div>
+					{/if}
 				</div>
 
-				<!-- Month & Year Filter -->
-				<div class="flex items-start gap-2">
-					<input
-						type="checkbox"
-						name="filter_month"
-						bind:checked={filterMonth}
-						class="mt-1.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-					/>
-					<div class="flex flex-col items-start gap-1">
-						<h1 class="text-sm font-semibold text-gray-700">Month & Year</h1>
+				<div class="flex items-start gap-4">
+					<label class="inline-flex items-center gap-2">
+						<input
+							type="checkbox"
+							bind:checked={filters.month}
+							class="h-3.5 w-3.5 rounded text-indigo-600"
+						/>
+						<span class="text-xs font-medium text-gray-700">Month & Year</span>
+					</label>
+					{#if filters.month}
 						<div class="flex gap-2">
 							<select
-								name="month"
-								class="w-32 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 								bind:value={selectedMonth}
-								disabled={!filterMonth}
+								onchange={handleMonthFilter}
+								class="w-auto rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
 							>
-								{#each months as { value, label }}
-									<option {value}>{label}</option>
+								{#each Array.from({ length: 12 }, (_, i) => i + 1) as month}
+									<option value={month}>
+										{new Date(2000, month - 1).toLocaleString('default', { month: 'long' })}
+									</option>
 								{/each}
 							</select>
 							<select
-								name="year"
-								class="w-24 rounded border border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 								bind:value={selectedYear}
-								disabled={!filterMonth}
+								onchange={handleMonthFilter}
+								class="w-auto rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
 							>
-								{#each years as year}
+								{#each Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i) as year}
 									<option value={year}>{year}</option>
 								{/each}
 							</select>
 						</div>
-					</div>
+					{/if}
+				</div>
+
+				<!-- Delete Options -->
+				<div class="flex items-start gap-4">
+					<label class="inline-flex items-center gap-2">
+						<input
+							type="checkbox"
+							bind:checked={showDelete}
+							class="h-3.5 w-3.5 rounded text-red-600 focus:ring-red-500"
+						/>
+						<span class="text-xs font-medium text-gray-700">Show Delete Options</span>
+					</label>
 				</div>
 
 				<!-- Action Buttons -->
-				<div class="flex gap-2">
+				<div class="flex items-center justify-end gap-2">
 					<button
-						type="submit"
-						class="rounded border border-gray-300 bg-blue-500 px-4 py-2 text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none disabled:opacity-50"
-						disabled={!selectedClinic &&
-							!filterCaseType &&
-							!filterCaseNo &&
-							!filterRemark &&
-							!filterDate &&
-							!filterMonth &&
-							!filterPatient &&
-							!filterPaymentStatus}
-					>
-						QUERY
-					</button>
-					<button
-						type="button"
-						class="rounded border border-gray-300 bg-gray-500 px-4 py-2 text-white shadow-sm hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 focus:outline-none"
-						onclick={async () => {
-							await goto('/');
-							window.location.reload();
+						type="reset"
+						class="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50"
+						onclick={() => {
+							window.location.href = '/';
 						}}
 					>
-						RESET
+						Reset
 					</button>
-					<div class="flex flex-col items-center gap-2">
-						<span class="text-sm font-medium text-gray-700">Delete mode</span>
-						<label class="relative inline-flex cursor-pointer items-center">
-							<input type="checkbox" bind:checked={isDeleting} class="peer sr-only" />
-							<div
-								class="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-red-600 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full"
-							></div>
-						</label>
-					</div>
+					<button
+						type="submit"
+						class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+						disabled={!Object.values(filters).some((v) => v)}
+					>
+						Apply Filters
+					</button>
 				</div>
 			</div>
-		</form>
-	</div>
 
-	<div id="printarea" class="flex flex-col">
-		{#if form?.success}
-			<div class="flex flex-row items-start justify-between space-x-12 p-6">
-				<div class="flex flex-col">
-					<h1 class="text-2xl font-bold text-gray-900">CASSEY DENTAL LABORATORY</h1>
-					<h2 class="mt-1 text-xl font-semibold text-gray-700">STATEMENT OF ACCOUNT</h2>
-				</div>
+			<!-- Action Buttons -->
+		</div>
+	</form>
+</div>
 
-				<div class="flex flex-col items-start space-y-1.5 pt-1 text-sm text-gray-800">
-					<div class="flex items-baseline">
-						<span class="w-32 pr-2 text-right font-medium text-gray-600">PRINT DATE:</span>
-						<span class="inline-block w-40 border-b border-gray-500"
-							>{getCurrentDateTime().fullDateTime}</span
-						>
+<!-- Records Section -->
+<div class="min-h-[400px] bg-white">
+	{#if data.records && data.records.length > 0}
+		<!-- Statement Header -->
+		{#if Object.keys(data.filters).length > 0}
+			<div class="border-b border-gray-200 bg-white p-8">
+				<div class="flex flex-row items-start justify-between space-x-12">
+					<div class="flex flex-col">
+						<h1 class="text-2xl font-bold text-gray-900">CASSEY DENTAL LABORATORY</h1>
+						<h2 class="mt-1 text-xl font-semibold text-gray-700">STATEMENT OF ACCOUNT</h2>
 					</div>
-					<div class="flex items-baseline">
-						<span class="w-fit pr-2 text-right font-medium text-gray-600">CUSTOMER NAME:</span>
-						<span class="inline-block w-40 border-b border-gray-500">{customerName}</span>
-					</div>
-					<div class="flex items-baseline">
-						<span class="w-32 pr-2 text-right font-medium text-gray-600">START DATE:</span>
-						<span class="inline-block w-40 border-b border-gray-500"
-							>{formatDate(getRecordDateRange(form.data).startingDate)}</span
-						>
-					</div>
-					<div class="flex items-baseline">
-						<span class="w-32 pr-2 text-right font-medium text-gray-600">END DATE:</span>
-						<span class="inline-block w-40 border-b border-gray-500"
-							>{formatDate(getRecordDateRange(form.data).recentDate)}</span
-						>
-					</div>
-					<div class="flex items-baseline">
-						<span class="w-32 pr-2 text-right font-medium text-gray-600">STATUS:</span>
-						<span class="inline-block w-40 font-semibold text-gray-900"
-							>{generateRecordsSummary(form.data).processStatus} - {generateRecordsSummary(
-								form.data
-							).financialStatus}
-						</span>
-					</div>
-				</div>
-			</div>
-		{:else if data.hasQuery}
-			<div class="flex flex-row items-start justify-between space-x-12 p-6">
-				<div class="flex flex-col">
-					<h1 class="text-2xl font-bold text-gray-900">CASSEY DENTAL LABORATORY</h1>
-					<h2 class="mt-1 text-xl font-semibold text-gray-700">STATEMENT OF ACCOUNT</h2>
-				</div>
 
-				<div class="flex flex-col items-start space-y-1.5 pt-1 text-sm text-gray-800">
-					<div class="flex items-baseline">
-						<span class="w-32 pr-2 text-right font-medium text-gray-600">PRINT DATE:</span>
-						<span class="inline-block w-40 border-b border-gray-500"
-							>{getCurrentDateTime().fullDateTime}</span
-						>
-					</div>
-					<div class="flex items-baseline">
-						<span class="w-fit pr-2 text-right font-medium text-gray-600">CUSTOMER NAME:</span>
-						<span class="inline-block w-40 border-b border-gray-500">{customerName}</span>
-					</div>
-					<div class="flex items-baseline">
-						<span class="w-32 pr-2 text-right font-medium text-gray-600">START DATE:</span>
-						<span class="inline-block w-40 border-b border-gray-500"
-							>{formatDate(getRecordDateRange(data.data).startingDate)}</span
-						>
-					</div>
-					<div class="flex items-baseline">
-						<span class="w-32 pr-2 text-right font-medium text-gray-600">END DATE:</span>
-						<span class="inline-block w-40 border-b border-gray-500"
-							>{formatDate(getRecordDateRange(data.data).recentDate)}</span
-						>
-					</div>
-					<div class="flex items-baseline">
-						<span class="w-32 pr-2 text-right font-medium text-gray-600">STATUS:</span>
-						<span class="inline-block w-40 font-semibold text-gray-900"
-							>{generateRecordsSummary(data.data).processStatus} - {generateRecordsSummary(
-								data.data
-							).financialStatus}
-						</span>
+					<div class="flex flex-col items-start space-y-1.5 pt-1 text-sm text-gray-800">
+						<div class="flex items-baseline">
+							<span class="w-32 pr-2 text-right font-medium text-gray-600">PRINT DATE:</span>
+							<span class="inline-block w-40 border-b border-gray-500">
+								{getCurrentDateTime().fullDateTime}
+							</span>
+						</div>
+						{#if customerName}
+							<div class="flex items-baseline">
+								<span class="w-fit pr-2 text-right font-medium text-gray-600">CUSTOMER NAME:</span>
+								<span class="inline-block w-40 border-b border-gray-500">{customerName}</span>
+							</div>
+						{/if}
+						<div class="flex items-baseline">
+							<span class="w-32 pr-2 text-right font-medium text-gray-600">START DATE:</span>
+							<span class="inline-block w-40 border-b border-gray-500">
+								{formatDate(getRecordDateRange(data.records).startingDate)}
+							</span>
+						</div>
+						<div class="flex items-baseline">
+							<span class="w-32 pr-2 text-right font-medium text-gray-600">END DATE:</span>
+							<span class="inline-block w-40 border-b border-gray-500">
+								{formatDate(getRecordDateRange(data.records).recentDate)}
+							</span>
+						</div>
+						<div class="flex items-baseline">
+							<span class="w-32 pr-2 text-right font-medium text-gray-600">STATUS:</span>
+							<span class="inline-block w-40 font-semibold text-gray-900">
+								{generateRecordsSummary(data.records).processStatus} -
+								{generateRecordsSummary(data.records).financialStatus}
+							</span>
+						</div>
 					</div>
 				</div>
 			</div>
 		{/if}
-		{#if !error && data.data.length > 0}
-			<table
-				class="mx-5 mt-2 w-[97%] border-collapse text-left text-sm text-gray-500 rtl:text-right"
-			>
-				<thead class="bg-gray-100 text-center text-xs text-gray-700 uppercase">
-					<tr>
-						{#each displayedKeys as keyIndex}
+
+		<!-- Table -->
+		<div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+			<table class="min-w-full table-fixed divide-y divide-gray-300">
+				<thead>
+					<tr class="border-b border-gray-300 bg-gray-100">
+						<th
+							scope="col"
+							class="sticky top-0 bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
+						>
+							Date Pickup
+						</th>
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
+						>
+							Date Dropoff
+						</th>
+						{#if Object.keys(data.filters).length <= 0}
 							<th
-								class="cursor-pointer border border-gray-300 px-6 py-3 font-semibold text-gray-700"
-								onclick={() => sortTable(keyIndex)}
+								scope="col"
+								class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
 							>
-								{Object.keys(table[0])
-									[keyIndex]?.replace(/([A-Z])/g, ' $1')
-									?.trim()}
-								{#if sortColumn === keyIndex}
-									{sortDirection === 'asc' ? '▲' : '▼'}
-								{/if}
+								Clinic
 							</th>
-						{/each}
-						<th class="border border-gray-300 px-6 py-3 font-semibold text-gray-700 print:hidden">
-							HISTORY
+						{/if}
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
+						>
+							Patient Name
 						</th>
-						<th class="border border-gray-300 px-6 py-3 font-semibold text-gray-700 print:hidden">
-							ACTIONS
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
+						>
+							Case Info
 						</th>
-						{#if isDeleting}
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
+						>
+							Description
+						</th>
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
+						>
+							Total Amount
+						</th>
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
+						>
+							Paid Amount
+						</th>
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
+						>
+							Status
+						</th>
+						{#if showDelete}
 							<th
-								class="border border-gray-300 bg-red-300 px-6 py-3 font-semibold text-gray-700 print:hidden"
+								scope="col"
+								class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800 print:hidden"
 							>
-								DELETE
+								Delete
 							</th>
 						{/if}
 					</tr>
 				</thead>
-				<tbody class="bg-white">
-					{#each paginatedData as row, index}
+				<tbody class="divide-y divide-gray-200 bg-white">
+					{#each paginatedRecords as record}
 						<tr
-							class={`border-gray-300 ${row.paidAmount >= row.totalAmount ? 'bg-blue-100' : 'bg-red-300'}`}
+							class={`
+							border-b border-gray-200 transition-colors
+							${
+								record.paymentStatus === 'unpaid'
+									? 'bg-red-200 '
+									: record.paymentStatus === 'paid'
+										? 'bg-green-200'
+										: ''
+							}
+						`}
 						>
-							{#each displayedKeys as keyIndex}
-								<td class="border border-gray-300 px-6 py-4 text-gray-900">
-									<a href={`/details/${row[Object.keys(table[0])[0]]}`}>
-										{#if keyIndex === 11 || keyIndex === 12}
-											<span>&#8369;</span>
-										{/if}
-										{#if keyIndex === 2}
-											<span>{row[Object.keys(table[0])[1]]} -</span>
-										{/if}
-
-										{row[Object.keys(table[0])[keyIndex]]}
-										{#if keyIndex === 15}
-											<span>
-												- {row[Object.keys(table[0])[17]]} - {row[Object.keys(table[0])[16]]}</span
-											>
-										{/if}
-									</a>
+							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
+								{record.datePickup}
+							</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
+								{record.dateDropoff ? record.dateDropoff : '-'}
+							</td>
+							{#if Object.keys(data.filters).length <= 0}
+								<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
+									{record.clinicName}
 								</td>
-							{/each}
-							<td class="border border-gray-300 px-6 py-4 print:hidden">
-								<a
-									aria-label="history"
-									href={`/history/${row[Object.keys(table[0])[0]]}`}
-									class="text-blue-500 no-underline hover:underline"
-								>
-									LINK
-								</a>
+							{/if}
+							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
+								{record.patientName}
 							</td>
-							<td
-								class=" flex flex-row justify-between border border-gray-300 px-6 py-4 text-center print:hidden"
-							>
-								<a
-									aria-label="in"
-									href={`/IN/${row[Object.keys(table[0])[0]]}`}
-									class=" inline-block rounded bg-blue-500 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-blue-700"
-								>
-									IN
-								</a>
-								<a
-									aria-label="out"
-									href={`/OUT/${row[Object.keys(table[0])[0]]}`}
-									class="inline-block rounded bg-orange-400 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-orange-600"
-								>
-									OUT
-								</a>
-								<a
-									aria-label="out"
-									href={`/AMOUNT/${row[Object.keys(table[0])[0]]}`}
-									class="inline-block rounded bg-yellow-400 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-yellow-600"
-								>
-									AMOUNT
-								</a>
-								<a
-									aria-label="out"
-									href={`/EDIT/${row[Object.keys(table[0])[0]]}`}
-									class="inline-block rounded bg-yellow-400 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-yellow-600"
-								>
-									EDIT
-								</a>
+							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
+								<div class="flex flex-col gap-1">
+									{#each record.orderItems as item}
+										<span>{item.caseTypeName} - {item.caseNo}</span>
+									{/each}
+								</div>
 							</td>
-							{#if isDeleting}
-								<td
-									class="justify-between border border-gray-300 px-6 py-4 text-center print:hidden"
-								>
-									<form action="?/deleteCase" method="post">
+							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
+								<div class="flex flex-col gap-1">
+									{#each record.orderItems as item}
+										<span>{item.orderDescription || '-'}</span>
+									{/each}
+								</div>
+							</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
+								₱{record.orderTotal}
+							</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
+								₱{record.paidAmount}
+							</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap">
+								<span class="flex flex-col gap-0.5">
+									<span class="font-medium">{record.remarks || 'No remarks'}</span>
+									<span
+										class={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium 
+										${record.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+									>
+										{record.paymentStatus}
+									</span>
+								</span>
+							</td>
+							{#if showDelete}
+								<td class="px-3 py-2 text-sm font-medium whitespace-nowrap print:hidden">
+									<form action="?/deleteRecord" method="POST">
+										<input type="hidden" name="record_id" value={record.recordId} />
 										<button
 											type="submit"
-											aria-label="in"
-											class=" inline-block rounded bg-red-300 px-3 py-1 text-xs font-semibold text-white no-underline hover:bg-blue-700"
+											class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-red-700/10 hover:bg-red-100"
 										>
-											DELETE
+											Delete
 										</button>
-										<input
-											type="text"
-											value={row[Object.keys(table[0])[0]]}
-											name="case_delete"
-											hidden
-										/>
 									</form>
 								</td>
 							{/if}
@@ -639,128 +492,119 @@
 					{/each}
 				</tbody>
 			</table>
+		</div>
 
-			<div class="mb-4 flex items-center gap-2 print:hidden">
-				<label for="itemsPerPage" class="text-sm font-medium text-[#164154]">Items per page:</label>
-				<select
-					id="itemsPerPage"
-					bind:value={itemsPerPage}
-					class="rounded border border-[#A1AEB3] bg-white px-2 py-1 text-sm text-[#164154]"
-				>
-					<option value={10}>10</option>
-					<option value={25}>25</option>
-					<option value={50}>50</option>
-					<option value={100}>100</option>
-				</select>
-			</div>
-
-			{#if totalPages > 1}
-				<div
-					class="mt-4 flex items-center justify-between border-t border-[#A1AEB3] bg-white px-4 py-3 sm:px-6 print:hidden"
-				>
-					<div class="flex flex-1 justify-between sm:hidden">
-						<button
-							class="relative inline-flex items-center rounded-md border border-[#A1AEB3] bg-white px-4 py-2 text-sm font-medium text-[#164154] hover:bg-[#A1AEB3] disabled:opacity-50"
-							onclick={() => changePage(currentPage - 1)}
-							disabled={currentPage === 1}
-						>
-							Previous
-						</button>
-						<button
-							class="relative ml-3 inline-flex items-center rounded-md border border-[#A1AEB3] bg-white px-4 py-2 text-sm font-medium text-[#164154] hover:bg-[#A1AEB3] disabled:opacity-50"
-							onclick={() => changePage(currentPage + 1)}
-							disabled={currentPage === totalPages}
-						>
-							Next
-						</button>
-					</div>
-					<div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-						<div>
-							<p class="text-sm text-[#778B92]">
-								Showing
-								<span class="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
-								to
-								<span class="font-medium">
-									{Math.min(currentPage * itemsPerPage, table.length)}
-								</span>
-								of
-								<span class="font-medium">{table.length}</span>
-								results
-							</p>
-						</div>
-						<div>
-							<nav
-								class="isolate inline-flex -space-x-px rounded-md shadow-sm"
-								aria-label="Pagination"
+		{#if totalPages > 1}
+			<div
+				class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 print:hidden"
+			>
+				<div class="flex flex-1 justify-between sm:hidden">
+					<button
+						onclick={prevPage}
+						class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+						disabled={currentPage === 1}
+					>
+						Previous
+					</button>
+					<button
+						onclick={nextPage}
+						class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+						disabled={currentPage === totalPages}
+					>
+						Next
+					</button>
+				</div>
+				<div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+					<div>
+						<p class="text-sm text-gray-700">
+							Showing <span class="font-medium">{(currentPage - 1) * recordsPerPage + 1}</span> to
+							<span class="font-medium"
+								>{Math.min(currentPage * recordsPerPage, data.records?.length || 0)}</span
 							>
+							of <span class="font-medium">{data.records?.length || 0}</span> results
+						</p>
+					</div>
+					<div>
+						<nav
+							class="isolate inline-flex -space-x-px rounded-md shadow-sm"
+							aria-label="Pagination"
+						>
+							<button
+								onclick={prevPage}
+								class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-gray-300 ring-inset hover:bg-gray-50"
+								disabled={currentPage === 1}
+							>
+								<span class="sr-only">Previous</span>
+								<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+									<path
+										fill-rule="evenodd"
+										d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+							{#each Array.from({ length: totalPages }, (_, i) => i + 1) as page}
 								<button
-									class="relative inline-flex items-center rounded-l-md border border-[#A1AEB3] bg-white px-2 py-2 text-sm font-medium text-[#164154] hover:bg-[#A1AEB3] disabled:opacity-50"
-									onclick={() => changePage(currentPage - 1)}
-									disabled={currentPage === 1}
+									onclick={() => goToPage(page)}
+									class={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+										page === currentPage
+											? 'z-10 bg-indigo-600 text-white'
+											: 'text-gray-900 ring-1 ring-gray-300 ring-inset hover:bg-gray-50'
+									}`}
 								>
-									<span class="sr-only">Previous</span>
-									<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-										<path
-											fill-rule="evenodd"
-											d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									{page}
 								</button>
-
-								{#each Array(totalPages) as _, i}
-									<button
-										class="relative inline-flex items-center border border-[#A1AEB3] bg-white px-4 py-2 text-sm font-medium {currentPage ===
-										i + 1
-											? 'bg-[#164154] text-white'
-											: 'text-[#164154] hover:bg-[#A1AEB3]'}"
-										onclick={() => changePage(i + 1)}
-									>
-										{i + 1}
-									</button>
-								{/each}
-
-								<button
-									class="relative inline-flex items-center rounded-r-md border border-[#A1AEB3] bg-white px-2 py-2 text-sm font-medium text-[#164154] hover:bg-[#A1AEB3] disabled:opacity-50"
-									onclick={() => changePage(currentPage + 1)}
-									disabled={currentPage === totalPages}
-								>
-									<span class="sr-only">Next</span>
-									<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-										<path
-											fill-rule="evenodd"
-											d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
-							</nav>
-						</div>
+							{/each}
+							<button
+								onclick={nextPage}
+								class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-gray-300 ring-inset hover:bg-gray-50"
+								disabled={currentPage === totalPages}
+							>
+								<span class="sr-only">Next</span>
+								<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+									<path
+										fill-rule="evenodd"
+										d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</nav>
 					</div>
 				</div>
-			{/if}
-		{/if}
-		{#if !form?.success && form?.error}
-			<div class="flex h-screen items-center justify-center">
-				<h1 class="text-2xl font-semibold text-red-500">{form.error}</h1>
 			</div>
 		{/if}
-		{#if error || data.data.length === 0}
-			<div class="flex h-screen items-center justify-center">
-				<h1 class="text-2xl font-semibold text-red-500">No Data Found</h1>
-			</div>
-		{/if}
-	</div>
+	{:else}
+		<div class="flex h-96 items-center justify-center">
+			<p class="text-center text-gray-500">
+				<span class="block text-2xl font-semibold">No records found</span>
+				<span class="mt-2 block text-sm">Try adjusting your filters or create a new record</span>
+			</p>
+		</div>
+	{/if}
 </div>
 
 <style>
 	@media print {
-		#printarea {
-			display: block;
-			-webkit-print-color-adjust: exact;
+		@page {
+			size: landscape;
+			margin: 1cm;
+			-webkit-print-color-adjust: exact !important; /* Chrome, Safari 6 – 15.3, Edge */
+			color-adjust: exact !important; /* Firefox 48 – 96 */
+			print-color-adjust: exact !important;
 		}
 	}
-	@page {
-		size: landscape;
+
+	/* Add these styles for better table appearance */
+	table {
+		border-collapse: separate;
+		border-spacing: 0;
+	}
+
+	th {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 	}
 </style>

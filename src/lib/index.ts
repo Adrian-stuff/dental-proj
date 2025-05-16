@@ -37,23 +37,28 @@ export function getCurrentDateTime() {
   };
 }
 // Define the interface for individual record items based on the provided schema
+interface OrderItem {
+  caseTypeId: number;
+  caseTypeName: string;
+  caseNo: string;
+  orderDescription?: string;
+}
+
 interface RecordItem {
   recordId: number;
-  caseType?: string | null;
-  caseNo: number;
-  datePickup?: string | null;      // Expected format: "YYYY-MM-DD"
-  timePickup?: string | null;      // Expected format: "HH:MM:SS" or "HH:MM"
-  dateDropoff?: string | null;     // Expected format: "YYYY-MM-DD"
-  timeDropoff?: string | null;     // Expected format: "HH:MM:SS" or "HH:MM"
-  doctorName: string;
+  clinicId: number;
   clinicName: string;
   patientName: string;
-  description?: string | null;
-  totalAmount?: string | null;     // Decimals typically handled as strings to preserve precision
-  paidAmount?: string | null;
-  excessPayment?: string | null;
-  createdAt: Date | string;       // Can be a JavaScript Date object or an ISO8601 string
-  remarks?: string | null;
+  datePickup: string;
+  timePickup?: string;
+  dateDropoff?: string;
+  timeDropoff?: string;
+  orderItems: OrderItem[];
+  orderTotal: number;
+  paidAmount: number;
+  remarks?: string;
+  paymentStatus: 'paid' | 'unpaid';
+  createdAt: Date | string;
 }
 
 // Define the interface for the function's result
@@ -167,82 +172,52 @@ interface RecordsSummary {
 }
 
 export function generateRecordsSummary(records: RecordItem[]): RecordsSummary {
-  // Handle empty or null input array
   if (!records || records.length === 0) {
     return {
       grandTotalAmount: 0,
       totalPaidAmount: 0,
       totalBalance: 0,
-      financialStatus: 'N/A', // Not Applicable
-      processStatus: 'N/A',   // Not Applicable
+      financialStatus: 'N/A',
+      processStatus: 'N/A'
     };
   }
 
-  let sumGrandTotalAmount = 0;
-  let sumTotalPaidAmount = 0;
+  const summary = records.reduce(
+    (acc, record) => {
+      acc.grandTotalAmount += record.orderTotal;
+      acc.totalPaidAmount += record.paidAmount;
 
-  let allRecordsAreConsideredPaid = true; // Assume all are paid until an unpaid one is found
-  let isAnyRecordPending = false;         // Flag to check if any record is 'Pending'
-  let areAllRecordsFinished = true;       // Assume all are finished until a non-finished one is found
+      if (record.paymentStatus === 'unpaid') {
+        acc.allPaid = false;
+      }
 
-  // Helper function to safely parse string amounts to numbers, defaulting to 0
-  const getSafeNumber = (value: string | null | undefined): number => {
-    if (value === null || value === undefined || typeof value !== 'string') {
-      return 0;
+      if (record.remarks === 'pending') {
+        acc.hasPending = true;
+      } else if (record.remarks !== 'finished') {
+        acc.allFinished = false;
+      }
+
+      return acc;
+    },
+    {
+      grandTotalAmount: 0,
+      totalPaidAmount: 0,
+      allPaid: true,
+      hasPending: false,
+      allFinished: true
     }
-    const num = parseFloat(value);
-    return isNaN(num) ? 0 : num; // If parsing fails (NaN), treat as 0
-  };
-
-  for (const record of records) {
-    const currentTotalAmount = getSafeNumber(record.totalAmount);
-    const currentPaidAmount = getSafeNumber(record.paidAmount);
-
-    sumGrandTotalAmount += currentTotalAmount;
-    sumTotalPaidAmount += currentPaidAmount;
-
-    // Determine if this specific record is unpaid
-    // Using a small epsilon for floating point comparisons, though direct > 0 might be fine
-    // if inputs are well-controlled decimals.
-    if (currentTotalAmount - currentPaidAmount > 0.001) {
-      allRecordsAreConsideredPaid = false;
-    }
-
-    // Check the individual processing status of the record
-    if (record.remarks === 'pending') {
-      isAnyRecordPending = true;
-    }
-
-    // If any record is not 'Finished', then the overall status cannot be 'Processed'
-    // This also correctly handles cases where remarks is undefined or has another value.
-    if (record.remarks !== 'finished') {
-      areAllRecordsFinished = false;
-    }
-  }
-
-  const finalTotalBalance = sumGrandTotalAmount - sumTotalPaidAmount;
-
-  // Determine final financial status
-  const finalFinancialStatus: 'Paid' | 'Unpaid' = allRecordsAreConsideredPaid ? 'Paid' : 'Unpaid';
-
-  // Determine final process status
-  let finalProcessStatus: 'Processed' | 'On going' | 'Partially Processed';
-  if (isAnyRecordPending) {
-    finalProcessStatus = 'On going'; // If any record is pending, the overall process is 'On going'
-  } else if (areAllRecordsFinished) {
-    // If no records are pending AND all records are marked as 'Finished'
-    finalProcessStatus = 'Processed';
-  } else {
-    // If no records are pending, but not all records are 'Finished'
-    finalProcessStatus = 'Partially Processed';
-  }
+  );
 
   return {
-    grandTotalAmount: sumGrandTotalAmount,
-    totalPaidAmount: sumTotalPaidAmount,
-    totalBalance: finalTotalBalance,
-    financialStatus: finalFinancialStatus,
-    processStatus: finalProcessStatus,
+    grandTotalAmount: summary.grandTotalAmount,
+    totalPaidAmount: summary.totalPaidAmount,
+    totalBalance: summary.grandTotalAmount - summary.totalPaidAmount,
+    financialStatus: summary.allPaid ? 'Paid' : 'Unpaid',
+    processStatus: summary.hasPending
+      ? 'On going'
+      : summary.allFinished
+        ? 'Processed'
+        : 'Partially Processed'
   };
 }
 

@@ -2,29 +2,120 @@
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+	const { record } = data;
 
-	let caseNo = $state(data.caseNo);
-	console.log('caseNo', data.recordData);
-	let total_amount: number | undefined = $state(data.recordData?.totalAmount as number);
-	let paid_amount: number | undefined = $state(data.recordData?.paidAmount as number);
-	let payment_method = $state('cash');
+	let total_amount = $state(parseFloat(record?.orderTotal) || 0);
+	let paid_amount = $state(parseFloat(record?.paidAmount) || 0);
+	let payment_method = $state(record?.paymentMethod || 'cash');
 	let other_payment_method = $state('');
+	let orderItems = $state(record?.items || []);
+
+	function updateOrderItem(index: number, field: string, value: any) {
+		orderItems[index] = { ...orderItems[index], [field]: value };
+		// Recalculate total amount
+		total_amount = orderItems.reduce(
+			(sum, item) => sum + parseFloat(item.itemCost) * item.itemQuantity,
+			0
+		);
+	}
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-gray-100">
-	<form method="POST" class="mb-4 w-full max-w-md rounded bg-white px-8 pt-6 pb-8 shadow-md">
-		<h2 class="mt-4 mb-6 block text-center text-xl font-bold text-gray-700">Payment Details</h2>
+	<form method="POST" class="mb-4 w-full max-w-4xl rounded bg-white px-8 pt-6 pb-8 shadow-md">
+		<!-- Order Items Section -->
+		<div class="mb-6">
+			<h3 class="mb-4 text-lg font-semibold text-gray-900">Order Items</h3>
+			<div class="space-y-4">
+				{#each orderItems as item, i}
+					<div class="grid grid-cols-5 gap-4 rounded-lg border border-gray-200 p-4">
+						<h1 class="col-span-5 text-sm font-bold text-gray-900">
+							{item.upOrDown === 'up' ? 'Upper' : 'Lower'}
+						</h1>
+						<!-- Case Type -->
+
+						<div>
+							<label class="block text-sm font-medium text-gray-700">
+								Case Type
+								<select
+									class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+									value={item.caseTypeId}
+									onchange={(e) =>
+										updateOrderItem(i, 'caseTypeId', parseInt(e.currentTarget.value))}
+								>
+									{#each data.caseTypes as caseType}
+										<option value={caseType.caseTypeId}>{caseType.caseTypeName}</option>
+									{/each}
+								</select>
+							</label>
+						</div>
+
+						<!-- Case Number -->
+						<div>
+							<label class="block text-sm font-medium text-gray-700">
+								Case No
+								<input
+									type="text"
+									value={item.caseNo}
+									disabled
+									class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50"
+								/>
+							</label>
+						</div>
+						<!-- Description -->
+						<div>
+							<label class="block text-sm font-medium text-gray-700">
+								Description
+								<input
+									type="text"
+									value={item.orderDescription || ''}
+									oninput={(e) => updateOrderItem(i, 'orderDescription', e.currentTarget.value)}
+									class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+								/>
+							</label>
+						</div>
+						<!-- Quantity -->
+						<div>
+							<label class="block text-sm font-medium text-gray-700">
+								Units
+								<input
+									type="number"
+									value={item.itemQuantity}
+									min="1"
+									oninput={(e) =>
+										updateOrderItem(i, 'itemQuantity', parseInt(e.currentTarget.value))}
+									class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+								/>
+							</label>
+						</div>
+
+						<!-- Cost -->
+						<div>
+							<label class="block text-sm font-medium text-gray-700">
+								Cost
+								<input
+									type="number"
+									value={item.itemCost}
+									oninput={(e) => updateOrderItem(i, 'itemCost', parseFloat(e.currentTarget.value))}
+									class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+								/>
+							</label>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+
+		<input type="hidden" name="orderItems" value={JSON.stringify(orderItems)} />
+
 		<div class="mb-4">
 			<label for="total_amount" class="mb-2 block text-sm font-bold text-gray-700">
 				Total Amount
 			</label>
-			<input type="text" name="case_type" value={data.recordData.caseType} hidden />
 			<input
 				type="number"
 				bind:value={total_amount}
 				name="total_amount"
 				placeholder="Enter total amount"
-				accept="number"
 				required
 				class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
 			/>
@@ -107,6 +198,7 @@
 				name="excess_payment"
 			/>
 		</div>
+		<input type="hidden" name="recordId" value={data.recordId} />
 		<div class="flex items-center justify-between">
 			<button
 				class="focus:shadow-outline rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700 focus:outline-none"

@@ -1,9 +1,10 @@
 import type { Actions, PageServerLoad } from '../$types';
 import { db } from '$lib/server/db';
-import { clinics, doctors, history, records, supply } from '$lib/server/db/schema';
+import { clinics, doctors, history, records, supply, orders, orderItems } from '$lib/server/db/schema';
 import { desc, sql } from 'drizzle-orm';
 import { convertFileToBytea } from '$lib';
 import { redirect } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
 
 // Function to format a Date object into the desired string format
 const timestampDate = (date: Date): string => {
@@ -29,54 +30,74 @@ const formatDate = (date: Date): string => {
 export const load: PageServerLoad = async ({ url }) => {
   const searchParams = url.searchParams;
   const exactDate = searchParams.get('date');
-  
+
   if (exactDate) {
-      const date = new Date(exactDate);
-      // Query for exact date
-      const recordData = await db
-          .select()
-          .from(records)
-          .where(sql`DATE(created_at) = ${exactDate}`);
+    const date = new Date(exactDate);
+    // Query for exact date with proper joins
+    const recordData = await db
+      .select({
+        record: records,
+        order: orders,
+        clinicName: clinics.clinicName,
+        items: sql<Array<typeof orderItems>>`json_agg(${orderItems})`
+      })
+      .from(records)
+      .innerJoin(orders, eq(records.orderId, orders.orderId))
+      .innerJoin(orderItems, eq(orders.orderId, orderItems.orderId))
+      .innerJoin(doctors, eq(records.doctorId, doctors.doctorId))
+      .innerJoin(clinics, eq(doctors.clinicId, clinics.clinicId))
+      .where(sql`DATE(records.created_at) = ${exactDate}`)
+      .groupBy(records.recordId, orders.orderId, doctors.doctorId, clinics.clinicId);
 
-      const supplies = await db
-          .select()
-          .from(supply)
-          .where(sql`DATE(supply_date) = ${exactDate}`);
+    const supplies = await db
+      .select()
+      .from(supply)
+      .where(sql`DATE(supply_date) = ${exactDate}`);
 
-      return {
-          currentDate: exactDate,
-          currentMonth: date.getMonth() + 1,
-          currentYear: date.getFullYear(),
-          recordData,
-          supplies
-      };
+    return {
+      currentDate: exactDate,
+      currentMonth: date.getMonth() + 1,
+      currentYear: date.getFullYear(),
+      recordData,
+      supplies
+    };
   } else {
-      const currentDate = new Date();
-  
-      // Get month and year from URL params or use current date
-      const selectedYear = parseInt(searchParams.get('year') || currentDate.getFullYear().toString());
-      const selectedMonth = parseInt(searchParams.get('month') || (currentDate.getMonth() + 1).toString());
+    const currentDate = new Date();
 
-      // Get the first and last day of the selected month
-      const startDate = new Date(selectedYear, selectedMonth - 1, 1);
-      const endDate = new Date(selectedYear, selectedMonth, 0);
+    // Get month and year from URL params or use current date
+    const selectedYear = parseInt(searchParams.get('year') || currentDate.getFullYear().toString());
+    const selectedMonth = parseInt(searchParams.get('month') || (currentDate.getMonth() + 1).toString());
 
-      const recordData = await db
-        .select()
-        .from(records)
-        .where(sql`"created_at" BETWEEN ${timestampDate(startDate)} AND ${timestampDate(endDate)}`);
+    // Get the first and last day of the selected month
+    const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+    const endDate = new Date(selectedYear, selectedMonth, 0);
 
-      const supplies = await db
-        .select()
-        .from(supply)
-        .where(sql`"supply_date" BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)}`);
+    const recordData = await db
+      .select({
+        record: records,
+        order: orders,
+        clinicName: clinics.clinicName,
+        items: sql<Array<typeof orderItems>>`json_agg(${orderItems})`
+      })
+      .from(records)
+      .innerJoin(orders, eq(records.orderId, orders.orderId))
+      .innerJoin(orderItems, eq(orders.orderId, orderItems.orderId))
+      .innerJoin(doctors, eq(records.doctorId, doctors.doctorId))
+      .innerJoin(clinics, eq(doctors.clinicId, clinics.clinicId))
+      .where(sql`records.created_at BETWEEN ${timestampDate(startDate)} AND ${timestampDate(endDate)}`)
+      .groupBy(records.recordId, orders.orderId, doctors.doctorId, clinics.clinicId);
 
-      return {
-        currentMonth: selectedMonth,
-        currentYear: selectedYear,
-        recordData,
-        supplies,
-      };
+    const supplies = await db
+      .select()
+      .from(supply)
+      .where(sql`supply_date BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)}`);
+
+    return {
+      currentMonth: selectedMonth,
+      currentYear: selectedYear,
+      recordData,
+      supplies,
+    };
   }
 };
 
@@ -84,16 +105,16 @@ export const actions = {
   changeDate: async ({ request }) => {
     const data = await request.formData();
     const exactDate = data.get('exact_date');
-    
+
     if (exactDate) {
-        // Handle exact date query
-        const date = new Date(exactDate as string);
-        return redirect(303, `?date=${exactDate}`);
+      // Handle exact date query
+      const date = new Date(exactDate as string);
+      return redirect(303, `?date=${exactDate}`);
     } else {
-        // Handle month/year query
-        const month = data.get('month');
-        const year = data.get('year');
-        return redirect(303, `?month=${month}&year=${year}`);
+      // Handle month/year query
+      const month = data.get('month');
+      const year = data.get('year');
+      return redirect(303, `?month=${month}&year=${year}`);
     }
   }
 } satisfies Actions;

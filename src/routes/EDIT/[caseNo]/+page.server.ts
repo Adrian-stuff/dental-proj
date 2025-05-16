@@ -2,44 +2,49 @@ import { db } from '$lib/server/db';
 import { caseTypes, clinics, doctors, records } from '$lib/server/db/schema';
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { desc, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
-    const record = await db
-      .select()
+    const recordData = await db
+      .select({
+        recordId: records.recordId,
+        datePickup: records.datePickup,
+        timePickup: records.timePickup,
+        dateDropoff: records.dateDropoff,
+        timeDropoff: records.timeDropoff,
+        doctorId: records.doctorId,
+        patientName: records.patientName,
+        description: records.description,
+        remarks: records.remarks,
+        doctorName: doctors.doctorName,
+        clinicId: doctors.clinicId,
+        clinicName: clinics.clinicName
+      })
       .from(records)
-      .where(sql`record_id = ${params.caseNo}`)
+      .leftJoin(doctors, eq(records.doctorId, doctors.doctorId))
+      .leftJoin(clinics, eq(doctors.clinicId, clinics.clinicId))
+      .where(sql`${records.recordId} = ${params.caseNo}`)
       .limit(1);
 
-    if (!record || record.length === 0) {
+    if (!recordData || recordData.length === 0) {
       throw error(404, 'Record not found');
     }
 
-    // Fetch additional data needed for dropdowns
-    const caseTypesData = await db.select().from(caseTypes);
     const doctorsData = await db
       .select()
       .from(doctors)
-      .orderBy(desc(doctors.doctorName));
+
+
     const clinicsData = await db
       .select()
       .from(clinics)
       .orderBy(desc(clinics.clinicName));
 
     return {
-      record: record[0],
-      caseTypes: caseTypesData,
-      doctors: doctorsData.map(doctor => ({
-        value: doctor.doctorName,
-        label: doctor.doctorName,
-        clinicId: doctor.clinicId
-      })),
-      clinics: clinicsData.map(clinic => ({
-        value: clinic.clinicName,
-        label: clinic.clinicName,
-        clinicId: clinic.clinicId
-      }))
+      record: recordData[0],
+      doctors: doctorsData,
+      clinics: clinicsData
     };
   } catch (e) {
     console.error('Error fetching record:', e);
@@ -51,20 +56,21 @@ export const actions = {
   update: async ({ request }) => {
     const formData = await request.formData();
     const recordId = formData.get('recordId');
-
+    const doctorId = parseInt(formData.get('doctorId')?.toString() || '0');
+    console.log(formData)
     try {
       await db
         .update(records)
         .set({
-          doctorName: formData.get('doctorName')?.toString(),
-          clinicName: formData.get('clinicName')?.toString(),
+          doctorId,
           patientName: formData.get('patientName')?.toString(),
-          description: formData.get('description')?.toString(),
-          remarks: formData.get('remarks')?.toString(),
-
-        } as unknown as typeof records.$inferInsert)
+        })
         .where(sql`record_id = ${recordId}`);
 
+      return {
+        success: true,
+        message: 'Record updated successfully'
+      };
     } catch (e) {
       console.error('Error updating record:', e);
       return {
@@ -72,7 +78,5 @@ export const actions = {
         message: 'Failed to update record'
       };
     }
-    redirect(303, `/?clinic_name=${formData.get('clinicName')?.toString()}`); // Redirect to the updated record page
-
   }
 };

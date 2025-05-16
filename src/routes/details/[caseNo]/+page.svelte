@@ -1,9 +1,17 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 
-	export let data: PageData;
-	const { record, history } = data;
+	let { data }: PageProps = $props();
+	const { record, orderItems, history } = data;
+
+	// Format currency
+	function formatCurrency(amount: number | null): string {
+		if (!amount) return '₱0.00';
+		return new Intl.NumberFormat('en-PH', {
+			style: 'currency',
+			currency: 'PHP'
+		}).format(amount);
+	}
 
 	// Format date and time
 	function formatDateTime(date: string | null, time: string | null): string {
@@ -11,21 +19,12 @@
 		const formattedDate = new Date(date).toLocaleDateString();
 		return time ? `${formattedDate} ${time}` : formattedDate;
 	}
-
-	// Format currency
-	function formatCurrency(amount: number | null): string {
-		if (amount === null) return '₱0.00';
-		return new Intl.NumberFormat('en-PH', {
-			style: 'currency',
-			currency: 'PHP'
-		}).format(amount);
-	}
 </script>
 
 <div class="container mx-auto px-4 py-8">
 	<div class="mb-8">
 		<h1 class="text-3xl font-bold text-gray-900">
-			Case Details #{record.caseNo}
+			Case Details #{record.recordId}
 		</h1>
 		<p class="text-sm text-gray-500">
 			Created on {new Date(record.createdAt).toLocaleDateString()}
@@ -38,8 +37,8 @@
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 			<!-- Basic Information -->
 			<div>
-				<p class="text-sm font-medium text-gray-500">Case Type</p>
-				<p class="text-lg text-gray-900">{record.caseType || 'N/A'}</p>
+				<p class="text-sm font-medium text-gray-500">Record ID</p>
+				<p class="text-lg text-gray-900">#{record.recordId}</p>
 			</div>
 			<div>
 				<p class="text-sm font-medium text-gray-500">Patient Name</p>
@@ -54,42 +53,52 @@
 				<p class="text-lg text-gray-900">{record.doctorName}</p>
 			</div>
 
-			<!-- Dates and Times -->
+			<!-- Dates -->
 			<div>
-				<p class="text-sm font-medium text-gray-500">Pickup Date & Time</p>
+				<p class="text-sm font-medium text-gray-500">Pickup</p>
 				<p class="text-lg text-gray-900">
 					{formatDateTime(record.datePickup, record.timePickup)}
 				</p>
 			</div>
 			<div>
-				<p class="text-sm font-medium text-gray-500">Dropoff Date & Time</p>
+				<p class="text-sm font-medium text-gray-500">Dropoff</p>
 				<p class="text-lg text-gray-900">
 					{formatDateTime(record.dateDropoff, record.timeDropoff)}
 				</p>
 			</div>
 
-			<!-- Financial Information -->
-			<div>
-				<p class="text-sm font-medium text-gray-500">Total Amount</p>
-				<p class="text-lg text-gray-900">{formatCurrency(+record.totalAmount)}</p>
-			</div>
-			<div>
-				<p class="text-sm font-medium text-gray-500">Paid Amount</p>
-				<p class="text-lg text-gray-900">{formatCurrency(+record.paidAmount)}</p>
-			</div>
-			<div>
-				<p class="text-sm font-medium text-gray-500">Excess Payment</p>
-				<p class="text-lg text-gray-900">{formatCurrency(parseInt(record.excessPayment))}</p>
-			</div>
-			<div>
-				<p class="text-sm font-medium text-gray-500">Payment Method</p>
-				<p class="text-lg text-gray-900 capitalize">{record.paymentMethod || 'Not specified'}</p>
-			</div>
+			<!-- Order Information -->
+			{#if record.orderInfo}
+				<div>
+					<p class="text-sm font-medium text-gray-500">Order Total</p>
+					<p class="text-lg text-gray-900">
+						{formatCurrency(+record.orderInfo.orderTotal)}
+					</p>
+				</div>
+				<div>
+					<p class="text-sm font-medium text-gray-500">Payment Status</p>
+					<p
+						class="text-lg capitalize {record.orderInfo.paymentStatus === 'paid'
+							? 'text-green-600'
+							: 'text-yellow-600'}"
+					>
+						{record.orderInfo.paymentStatus}
+					</p>
+				</div>
+				<div>
+					<p class="text-sm font-medium text-gray-500">Payment Method</p>
+					<p class="text-lg text-gray-900 capitalize">
+						{record.orderInfo.paymentMethod}
+					</p>
+				</div>
+			{/if}
 
-			<!-- Description and Remarks -->
+			<!-- Additional Info -->
 			<div class="col-span-full">
 				<p class="text-sm font-medium text-gray-500">Description</p>
-				<p class="text-lg text-gray-900">{record.description || 'No description provided'}</p>
+				<p class="text-lg text-gray-900">
+					{record.description || 'No description provided'}
+				</p>
 			</div>
 			<div class="col-span-full">
 				<p class="text-sm font-medium text-gray-500">Remarks</p>
@@ -97,6 +106,57 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Order Items -->
+	{#if orderItems && orderItems.length > 0}
+		<div class="mb-8 rounded-lg bg-white p-6 shadow-lg">
+			<h2 class="mb-4 text-xl font-semibold text-gray-800">Order Items</h2>
+			<div class="overflow-x-auto">
+				<table class="min-w-full divide-y divide-gray-200">
+					<thead>
+						<tr>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+								Type
+							</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+								Case No
+							</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+								Quantity
+							</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+								Cost
+							</th>
+							<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+								Description
+							</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-gray-200">
+						{#each orderItems as item}
+							<tr>
+								<td class="px-6 py-4 whitespace-nowrap">
+									{item.upOrDown}
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap">
+									{item.caseNo}
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap">
+									{item.itemQuantity}
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap">
+									{formatCurrency(+item.itemCost)}
+								</td>
+								<td class="px-6 py-4">
+									{item.orderDescription || '-'}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{/if}
 
 	<!-- Case History -->
 	{#if history && history.length > 0}
@@ -120,8 +180,12 @@
 									</div>
 									<div class="min-w-0 flex-1">
 										<div class="text-sm text-gray-500">
-											<span class="font-medium text-gray-900">{event.historyType}</span>
-											<span class="ml-2">{new Date(event.historyDate).toLocaleDateString()}</span>
+											<span class="font-medium text-gray-900">
+												{event.historyType}
+											</span>
+											<span class="ml-2">
+												{new Date(event.historyDate).toLocaleDateString()}
+											</span>
 										</div>
 									</div>
 								</div>

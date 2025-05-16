@@ -11,77 +11,87 @@
 	// State management for dropdowns
 	let allDoctors = $state(data?.doctors);
 	let allClinics = $state(data?.clinics);
-	let filteredDoctors = $state<{ value: string; label: string; clinicId: number }[]>(allDoctors);
-	let filteredClinics = $state<{ value: string; label: string; clinicId: number }[]>(allClinics);
+	// Simplify state management - remove dropdown visibility states
+	let selectedDoctor = $state(data.record.doctorId);
+	let selectedClinic = $state(data.record.clinicId);
+	let availableDoctors = $state(allDoctors.filter((d) => d.clinicId === record.clinicId));
+	let filteredDoctors = $state(availableDoctors);
 
-	let selectedDoctor: { value: string; label: string; clinicId: number } | null = $state(null);
-	let selectedClinic: { value: string; label: string; clinicId: number } | null = $state(null);
-
+	// Additional state for searchable dropdowns
 	let doctorInputValue = $state(record.doctorName);
 	let clinicInputValue = $state(record.clinicName);
 	let showDoctorDropdown = $state(false);
 	let showClinicDropdown = $state(false);
+	let filteredClinics = $state(allClinics);
 
-	// Initialize selected values
+	// Initialize with current values
 	onMount(() => {
 		// Set initial clinic
-		const initialClinic = allClinics.find((c) => c.value === record.clinicName);
-		if (initialClinic) {
-			selectClinic(initialClinic);
-		}
+		const clinic = allClinics.find((c) => c.clinicId === record.clinicId);
+		if (clinic) {
+			clinicInputValue = clinic.clinicName;
+			selectedClinic = clinic.clinicId;
 
-		// Set initial doctor
-		const initialDoctor = allDoctors.find((d) => d.value === record.doctorName);
-		if (initialDoctor) {
-			selectDoctor(initialDoctor);
+			// Filter doctors for this clinic
+			availableDoctors = allDoctors.filter((d) => d.clinicId === clinic.clinicId);
+			filteredDoctors = availableDoctors;
+
+			// Set initial doctor
+			const doctor = availableDoctors.find((d) => d.doctorId === record.doctorId);
+			if (doctor) {
+				doctorInputValue = doctor.doctorName;
+				selectedDoctor = doctor.doctorId;
+			}
 		}
 	});
 
 	function filterDoctors() {
-		filteredDoctors = allDoctors.filter((doctor) =>
-			doctor.label.toLowerCase().includes(doctorInputValue.toLowerCase())
+		filteredDoctors = availableDoctors.filter((doctor) =>
+			doctor.doctorName.toLowerCase().includes(doctorInputValue.toLowerCase())
 		);
 		showDoctorDropdown = doctorInputValue.length > 0 && filteredDoctors.length > 0;
 	}
 
-	function selectDoctor(doctor: { value: string; label: string; clinicId: number }) {
-		selectedDoctor = doctor;
-		doctorInputValue = doctor.label;
+	function selectDoctor(doctor: (typeof allDoctors)[0]) {
+		selectedDoctor = doctor.doctorId;
+		doctorInputValue = doctor.doctorName;
 		showDoctorDropdown = false;
 	}
 
 	function filterClinics() {
 		filteredClinics = allClinics.filter((clinic) =>
-			clinic.label.toLowerCase().includes(clinicInputValue.toLowerCase())
+			clinic.clinicName.toLowerCase().includes(clinicInputValue.toLowerCase())
 		);
 		showClinicDropdown = clinicInputValue.length > 0 && filteredClinics.length > 0;
-		// Reset doctor selection when clinic input changes
 		selectedDoctor = null;
 		doctorInputValue = '';
-		filteredDoctors = [];
 	}
 
-	function selectClinic(clinic: { value: string; label: string; clinicId: number }) {
-		selectedClinic = clinic;
-		clinicInputValue = clinic.label;
+	function selectClinic(clinic: (typeof allClinics)[0]) {
+		selectedClinic = clinic.clinicId;
+		clinicInputValue = clinic.clinicName;
 		showClinicDropdown = false;
-		// Filter doctors based on selected clinic
-		filteredDoctors = allDoctors.filter((doctor) => doctor.clinicId === clinic.clinicId);
-	}
 
-	// Handle successful form submission
-	function handleSubmitSuccess() {
-		if (form?.success) {
-			setTimeout(() => {
-				goto('/');
-			}, 500);
+		// Reset doctor selection first
+		selectedDoctor = null;
+		doctorInputValue = '';
+
+		// Update available doctors for this clinic
+		availableDoctors = allDoctors.filter((doctor) => doctor.clinicId === clinic.clinicId);
+		filteredDoctors = availableDoctors;
+
+		// Auto-select if only one doctor
+		if (availableDoctors.length === 1) {
+			const doctor = availableDoctors[0];
+			selectedDoctor = doctor.doctorId;
+			doctorInputValue = doctor.doctorName;
 		}
 	}
 </script>
 
 <div class="mx-auto max-w-2xl px-4 py-8">
 	<div class="mb-8 flex items-center justify-between">
-		<h1 class="text-2xl font-bold text-gray-900">Edit Record #{record.caseNo}</h1>
+		<h1 class="text-2xl font-bold text-gray-900">Edit Record #{record.recordId}</h1>
 		<a
 			href="/"
 			class="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
@@ -119,25 +129,30 @@
 						}}
 						onblur={() => setTimeout(() => (showClinicDropdown = false), 200)}
 						required
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
 						placeholder="Clinic name"
 					/>
 				</label>
 				{#if showClinicDropdown}
 					<ul
-						class="ring-opacity-5 absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black"
+						class="ring-opacity-5 absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black focus:outline-none"
 					>
 						{#each filteredClinics as clinic}
 							<li
-								class="cursor-pointer px-4 py-2 hover:bg-indigo-600 hover:text-white"
-								onmousedown={() => selectClinic(clinic)}
+								class="relative cursor-default py-2 pr-9 pl-3 text-gray-900 select-none hover:bg-indigo-600 hover:text-white"
+								onclick={() => selectClinic(clinic)}
 							>
-								{clinic.label}
+								<span class="block truncate">{clinic.clinicName}</span>
+								{#if selectedClinic === clinic.clinicId}
+									<span class="absolute inset-y-0 right-0 flex items-center pr-2 text-indigo-600"
+										>✓</span
+									>
+								{/if}
 							</li>
 						{/each}
 					</ul>
 				{/if}
-				<input type="hidden" name="clinicName" value={selectedClinic?.value} />
+				<input type="hidden" name="clinicId" value={selectedClinic} />
 			</div>
 
 			<!-- Doctor Name with Dropdown -->
@@ -154,25 +169,32 @@
 						onblur={() => setTimeout(() => (showDoctorDropdown = false), 200)}
 						required
 						disabled={!selectedClinic}
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100"
-						placeholder="Doctor name"
+						class="block w-full appearance-none rounded-md border {selectedClinic
+							? 'border-gray-300'
+							: 'cursor-not-allowed border-dashed border-gray-300 bg-gray-100'} px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+						placeholder={selectedClinic ? 'Doctor name' : 'Select a clinic first'}
 					/>
 				</label>
 				{#if showDoctorDropdown}
 					<ul
-						class="ring-opacity-5 absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black"
+						class="ring-opacity-5 absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black focus:outline-none"
 					>
 						{#each filteredDoctors as doctor}
 							<li
-								class="cursor-pointer px-4 py-2 hover:bg-indigo-600 hover:text-white"
-								onmousedown={() => selectDoctor(doctor)}
+								class="relative cursor-default py-2 pr-9 pl-3 text-gray-900 select-none hover:bg-indigo-600 hover:text-white"
+								onclick={() => selectDoctor(doctor)}
 							>
-								{doctor.label}
+								<span class="block truncate">{doctor.doctorName}</span>
+								{#if selectedDoctor === doctor.doctorId}
+									<span class="absolute inset-y-0 right-0 flex items-center pr-2 text-indigo-600"
+										>✓</span
+									>
+								{/if}
 							</li>
 						{/each}
 					</ul>
 				{/if}
-				<input type="hidden" name="doctorName" value={selectedDoctor?.value} />
+				<input type="hidden" name="doctorId" value={selectedDoctor} />
 			</div>
 
 			<!-- Patient Name -->
@@ -189,18 +211,6 @@
 						placeholder="Patient name"
 					/>
 				</label>
-			</div>
-
-			<!-- Description -->
-			<div>
-				<label for="description" class="block text-sm font-medium text-gray-700">Description</label>
-				<textarea
-					id="description"
-					name="description"
-					rows="3"
-					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-					>{record.description}</textarea
-				>
 			</div>
 
 			<!-- Remarks -->

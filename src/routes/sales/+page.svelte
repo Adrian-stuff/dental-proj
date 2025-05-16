@@ -5,7 +5,7 @@
 
 	let { data, form }: PageProps = $props();
 	let { currentMonth, currentYear, recordData, supplies } = data;
-
+	console.log(data.recordData);
 	let selectedMonth = $state(currentMonth);
 	let selectedYear = $state(currentYear);
 	let selectedDate = $state<string | null>(null); // Add this for exact date
@@ -24,33 +24,25 @@
 		income: number;
 	}
 
-	interface StaffSalary {
-		name: string;
-		salary: number;
-	}
-
 	function calculateClientIncome(records: any[]): ClientIncome[] {
 		const clientIncomes: { [key: string]: number } = {};
 		records.forEach((record) => {
-			if (record.clinicName && record.paidAmount) {
-				const paidAmount = parseFloat(record.paidAmount);
-				clientIncomes[record.clinicName] = (clientIncomes[record.clinicName] || 0) + paidAmount;
+			const clinic = record.clinicName;
+			const paid = parseFloat(record.order?.paidAmount || 0);
+			if (clinic && paid) {
+				clientIncomes[clinic] = (clientIncomes[clinic] || 0) + paid;
 			}
 		});
-		return Object.entries(clientIncomes).map(([clinicName, income]) => ({
-			name: clinicName,
+		return Object.entries(clientIncomes).map(([name, income]) => ({
+			name,
 			income
 		}));
 	}
 
 	function calculateTotalIncome(records: any[]): number {
-		let total = 0;
-		records.forEach((record) => {
-			if (record.paidAmount) {
-				total += parseFloat(record.paidAmount);
-			}
-		});
-		return total;
+		return records.reduce((total, record) => {
+			return total + parseFloat(record.order?.paidAmount || 0);
+		}, 0);
 	}
 
 	function calculateTotalSupply(supplies: any[]): number {
@@ -64,7 +56,7 @@
 
 	// Calculate total supply from supplies array
 	const totalSupply: number = calculateTotalSupply(supplies);
-	let staffSalaries = $state<StaffSalary[]>([]);
+	let staffSalaries = $state([]);
 	let newStaffName = $state('');
 	let newStaffSalary = $state('');
 	let totalSalaries = $state(0);
@@ -216,6 +208,11 @@
 										Date
 									</th>
 									<th
+										class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+									>
+										Description
+									</th>
+									<th
 										class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
 									>
 										Amount
@@ -228,6 +225,9 @@
 										<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
 											{formatDate(supply.supplyDate)}
 										</td>
+										<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+											{supply.supplyDescription || '-'}
+										</td>
 										<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
 											&#8369;{parseFloat(supply.supplyCost).toFixed(2)}
 										</td>
@@ -237,6 +237,7 @@
 									<td class="px-6 py-4 text-sm font-semibold whitespace-nowrap text-gray-900">
 										Total Supply
 									</td>
+									<td class="px-6 py-4 text-sm font-semibold whitespace-nowrap text-gray-900"> </td>
 									<td
 										class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
 									>

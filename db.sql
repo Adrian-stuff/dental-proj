@@ -5,7 +5,8 @@ DROP TABLE IF EXISTS doctors CASCADE; -- Drop doctors, which depends on clinics
 DROP TABLE IF EXISTS clinics CASCADE; -- Drop clinics last, as it is depended on by doctors.
 DROP TABLE IF EXISTS case_types CASCADE; -- Drop clinics last, as it is depended on by doctors.
 DROP TABLE IF EXISTS supply CASCADE;
-
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS order_items CASCADE;
 
 CREATE TABLE supply (
 	supply_id SERIAL PRIMARY KEY,
@@ -34,39 +35,56 @@ CREATE TABLE doctors (
     clinic_id INTEGER REFERENCES clinics(clinic_id)
 );
 
+-- Table for orders
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    order_date DATE NOT NULL,
+    -- order_total DECIMAL GENERATED ALWAYS AS (
+    --         (SELECT COALESCE(SUM(item_cost * item_quantity), 0)
+    --         FROM order_items
+    --         WHERE order_items.order_id = orders.order_id)
+    --     ) STORED,
+    order_total DECIMAL(10,2) NOT NULL,
+    paid_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    excess_payment DECIMAL(10, 2),
+	payment_method VARCHAR(255) NOT NULL ,
+    payment_status VARCHAR(255) GENERATED ALWAYS AS (
+        CASE 
+            WHEN paid_amount >= order_total THEN 'paid'
+            ELSE 'unpaid'
+        END
+    ) STORED,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+-- Table for Order Items
+CREATE TABLE order_items (
+    order_item_id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(order_id),
+    up_or_down VARCHAR(255) NOT NULL,
+    case_type_id INTEGER REFERENCES case_types(case_type_id) NOT NULL,
+    case_no SERIAL NOT NULL,
+    item_cost DECIMAL NOT NULL,
+    item_quantity INTEGER NOT NULL,
+    order_description TEXT
+);
+
 -- Table for Records
 CREATE TABLE records (
     record_id SERIAL PRIMARY KEY,
-    case_type TEXT,
-    case_no INTEGER,
+    order_id INTEGER REFERENCES orders(order_id),
     date_pickup DATE,
 	time_pickup TIME WITH TIME ZONE,
 	date_dropoff DATE,
 	time_dropoff TIME WITH TIME ZONE,
-    doctor_name VARCHAR(255) NOT NULL,
-    clinic_name VARCHAR(255) NOT NULL,
+    doctor_id INTEGER REFERENCES doctors(doctor_id) NOT NULL,
     patient_name VARCHAR(255) NOT NULL,
-	-- upper_unit INTEGER,
-	-- lower_unit INTEGER,
-	-- upper_cost INTEGER,
-	-- lower_cost INTEGER,
     description TEXT,
 	remarks TEXT,
-    total_amount DECIMAL(10, 2),
-    paid_amount DECIMAL(10, 2),
-    excess_payment DECIMAL(10, 2),
-	payment_method TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE records
-ADD COLUMN payment_status TEXT GENERATED ALWAYS AS (
-    CASE 
-        WHEN paid_amount >= total_amount THEN 'paid'
-        ELSE 'unpaid'
-    END
-) STORED;
-CREATE INDEX idx_records_payment_status ON records(payment_status);
+
+CREATE INDEX idx_orders_payment_status ON orders(payment_status);
 
 -- Table for History
 CREATE TABLE history (
@@ -74,7 +92,7 @@ CREATE TABLE history (
     history_type VARCHAR(255) NOT NULL,
     history_date DATE,
 	history_time TIME WITH TIME ZONE DEFAULT CURRENT_TIME,
-    record_id INTEGER NOT NULL,
+    record_id INTEGER REFERENCES records(record_id) NOT NULL,
 	image_data BYTEA
 );
 
@@ -82,8 +100,7 @@ CREATE TABLE history (
 -- Optional indexes for faster lookups
 CREATE INDEX idx_records_patient_name ON records (patient_name);
 CREATE INDEX idx_records_date_pickup ON records (date_pickup);
-CREATE INDEX idx_records_doctor_name ON records (doctor_name);
-CREATE INDEX idx_records_clinic_name ON records (clinic_name);
+CREATE INDEX idx_records_doctor_id ON records (doctor_id);
 
 -- Sample Data Insertion
 INSERT INTO clinics (clinic_name)
@@ -130,7 +147,3 @@ VALUES
     ('TC', 0),
     ('BJ', 0);
 
-
--- Updating excess payment based on paid and total amount
-UPDATE records
-SET excess_payment = paid_amount - total_amount;

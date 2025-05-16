@@ -1,43 +1,54 @@
-import type { Actions, PageServerLoad } from '../../$types';
+import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { clinics, doctors, history, records } from '$lib/server/db/schema';
-import { desc, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { convertFileToBytea } from '$lib';
 import { redirect } from '@sveltejs/kit';
 
-
 export const load: PageServerLoad = async ({ params }) => {
-  const caseNo = params.caseNo.toString();
-  let recordData = await db.select().from(records).where(sql`record_id = ${caseNo}`);
+  const recordData = await db
+    .select({
+      recordId: records.recordId,
+      patientName: records.patientName,
+      doctorName: doctors.doctorName,
+      clinicName: clinics.clinicName,
+      description: records.description,
+      remarks: records.remarks
+    })
+    .from(records)
+    .leftJoin(doctors, eq(records.doctorId, doctors.doctorId))
+    .leftJoin(clinics, eq(doctors.clinicId, clinics.clinicId))
+    .where(eq(records.recordId, parseInt(params.caseNo)));
+
+  if (!recordData || recordData.length === 0) {
+    throw new Error('Record not found');
+  }
 
   return {
-    caseNo,
-    recordData: recordData[0],
+    record: recordData[0]
   };
 };
 
 export const actions = {
-  default: async ({ cookies, request }) => {
+  default: async ({ request }) => {
     const data = await request.formData();
-    console.log('Form data:', data);
+    const recordId = parseInt(data.get('recordId')?.toString() || '0');
 
     try {
-      await db.update(records).set({
-
-        remarks: "pending",
-      } as unknown as typeof records.$inferInsert).where(sql`case_no = ${data.get('case_no')?.toString()} AND case_type = ${data.get('case_type')?.toString()}`);
+      // Insert history record
       await db.insert(history).values({
         historyType: "in",
-        recordId: data.get('record_id')?.toString(),
+        recordId,
         imageData: await convertFileToBytea(data.get('in-img') as File),
-        historyDate: data.get("date"),
-        historyTime: data.get("time"),
-      } as unknown as typeof history.$inferInsert);
-    } catch (error) {
-      console.error('Error inserting record:', error);
-      return { success: false, error: 'Failed to insert record' };
-    }
+        historyDate: data.get("date")?.toString(),
+        historyTime: data.get("time")?.toString(),
+      } as typeof history.$inferInsert);
 
-    redirect(303, `/history/${data.get('record_id')?.toString()}`); // Redirect to the desired page after successful insertion
+    } catch (error) {
+      console.error('Error processing IN record:', error);
+      return { success: false, error: 'Failed to process IN record' };
+    }
+    redirect(303, `/history/${recordId}`);
+
   }
-} satisfies Actions;
+};

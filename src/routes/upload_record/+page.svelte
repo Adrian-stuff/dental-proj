@@ -6,18 +6,26 @@
 
 	let allDoctors = $state(data?.doctors);
 	let allClinics = $state(data?.clinics);
-	let filteredDoctors = $state<{ value: string; label: string; clinicId: number }[]>(allDoctors);
-	let filteredClinics = $state<{ value: string; label: string; clinicId: number }[]>(allClinics);
+	let filteredDoctors = $state(allDoctors);
+	let filteredClinics = $state(allClinics);
 
-	let selectedDoctor: { value: string; label: string; clinicId: number } | null = $state(null);
-	let selectedClinic: { value: string; label: string; clinicId: number } | null = $state(null);
+	let selectedDoctor: {
+		doctorId: number;
+		doctorName: string;
+		clinicId: number;
+	} | null = $state(null);
+	let selectedClinic: {
+		clinicId: number;
+		clinicName: string;
+	} | null = $state(null);
 
 	let total_amount: number | undefined = $state();
 	let paid_amount: number | undefined = $state();
 	let date: string | undefined = $state();
 	let time: string | undefined = $state();
 
-	let case_type: string = $state('OR');
+	let case_type_upper: number = $state(1);
+	let case_type_lower: number = $state(1);
 	let in_file: HTMLInputElement | undefined = $state();
 	let out_file: HTMLInputElement | undefined = $state();
 	let in_img: HTMLImageElement | undefined = $state();
@@ -25,12 +33,11 @@
 	let show_in: boolean = $state(false);
 	let show_out: boolean = $state(false);
 
-	let doctorInputValue = $state('');
-	let clinicInputValue = $state('');
+	let doctorInputValue = $state(null);
+	let clinicInputValue = $state(null);
 	let showDoctorDropdown = $state(false);
 	let showClinicDropdown = $state(false);
 	let payment_method = $state('cash');
-	let other_payment_method = $state('');
 	function handleInImageChange() {
 		const file = in_file?.files?.[0];
 
@@ -50,20 +57,20 @@
 
 	function filterDoctors() {
 		filteredDoctors = allDoctors.filter((doctor) =>
-			doctor.label.toLowerCase().includes(doctorInputValue.toLowerCase())
+			doctor.doctorName.toLowerCase().includes(doctorInputValue.toLowerCase())
 		);
 		showDoctorDropdown = doctorInputValue.length > 0 && filteredDoctors.length > 0;
 	}
 
-	function selectDoctor(doctor: { value: string; label: string; clinicId: number }) {
+	function selectDoctor(doctor: { doctorId: number; doctorName: string; clinicId: number }) {
 		selectedDoctor = doctor;
-		doctorInputValue = doctor.label;
+		doctorInputValue = doctor.doctorName;
 		showDoctorDropdown = false;
 	}
 
 	function filterClinics() {
 		filteredClinics = allClinics.filter((clinic) =>
-			clinic.label.toLowerCase().includes(clinicInputValue.toLowerCase())
+			clinic.clinicName.toLowerCase().includes(clinicInputValue.toLowerCase())
 		);
 		showClinicDropdown = clinicInputValue.length > 0 && filteredClinics.length > 0;
 		// Reset doctor selection when clinic input changes
@@ -72,9 +79,9 @@
 		filteredDoctors = [];
 	}
 
-	function selectClinic(clinic: { value: string; label: string; clinicId: number }) {
+	function selectClinic(clinic: { clinicId: number; clinicName: string }) {
 		selectedClinic = clinic;
-		clinicInputValue = clinic.label;
+		clinicInputValue = clinic.clinicName;
 		showClinicDropdown = false;
 		// Filter doctors based on the selected clinic
 		filteredDoctors = allDoctors.filter((doctor) => doctor.clinicId === clinic.clinicId);
@@ -85,7 +92,7 @@
 		} else if (filteredDoctors.length === 1) {
 			// Automatically select the doctor if only one is available in the clinic
 			selectedDoctor = filteredDoctors[0];
-			doctorInputValue = filteredDoctors[0].label;
+			doctorInputValue = filteredDoctors[0].doctorName;
 		}
 	}
 
@@ -95,6 +102,9 @@
 	let videoElement: HTMLVideoElement = $state();
 	let canvasElement: HTMLCanvasElement = $state();
 	let showSettingsModal = $state(false);
+
+	// Add jaw selection state
+	let selected_jaw = $state('upper');
 
 	// Function to handle camera operations
 	async function startCamera() {
@@ -173,6 +183,35 @@
 		showSettingsModal = false;
 	}
 
+	// Add function to get next case number
+	function getNextCaseNumber(caseTypeId: number) {
+		const caseType = data?.caseTypes.find((ct) => ct.caseTypeId === caseTypeId);
+		return caseType ? caseType.numberOfCases + 1 : 1;
+	}
+
+	// Add function to calculate case numbers based on jaw selection
+	function calculateCaseNumbers() {
+		const upperNumber = getNextCaseNumber(case_type_upper);
+		let lowerNumber = getNextCaseNumber(case_type_lower);
+
+		// If same case type is selected for both jaws and both are visible
+		if (case_type_upper === case_type_lower && selected_jaw === 'U/L') {
+			lowerNumber = upperNumber + 1;
+		}
+
+		return { upperNumber, lowerNumber };
+	}
+
+	$effect(() => {
+		// Recalculate case numbers whenever case types or jaw selection changes
+		const { upperNumber, lowerNumber } = calculateCaseNumbers();
+		next_case_upper = upperNumber;
+		next_case_lower = lowerNumber;
+	});
+
+	let next_case_upper = $state(1);
+	let next_case_lower = $state(1);
+
 	onMount(() => {
 		date = new Date().toISOString().split('T')[0];
 		time = new Date().toLocaleTimeString('en-GB', {
@@ -189,212 +228,388 @@
 	console.log('clinics', data?.clinics);
 </script>
 
-<div class="mt-8 flex justify-center">
+<div class=" flex justify-center px-4 md:px-8">
 	<form
-		class="mb-4 flex w-full max-w-lg flex-col gap-6 rounded-md bg-white px-8 pb-8 shadow-md"
+		class="mb-4 flex w-full flex-col gap-6 rounded-md bg-white p-6 shadow-md md:max-w-[1200px]"
 		method="POST"
 		enctype="multipart/form-data"
 	>
-		<h2 class=" text-center text-2xl font-semibold text-gray-800">Add New Record</h2>
-		<div class="flex flex-row gap-8">
-			<div class="flex w-1/2 flex-col gap-4">
-				<label for="case_type" class="mb-2 block text-sm font-bold text-gray-700">
-					Case type
-					<select
-						name="case_type"
-						bind:value={case_type}
-						required
-						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-					>
-						{#each data?.caseTypes as caseType}
-							<option value={caseType.caseType}>{caseType.caseType}</option>
-						{/each}
-					</select>
-				</label>
-				<label for="case_number" class="mb-2 block text-sm font-bold text-gray-700">
-					Case number
+		<h2 class="text-center text-2xl font-semibold text-gray-800">Add New Record</h2>
+
+		<!-- First Row: Patient Information -->
+		<div class="grid grid-cols-4 gap-4">
+			<!-- Clinic Selection -->
+			<div class="relative">
+				<label for="clinic_name" class="mb-2 block text-sm font-bold text-gray-700">
+					Clinic
 					<input
 						type="text"
-						name="case_number"
-						class="block w-full cursor-not-allowed appearance-none rounded-md border border-dashed border-gray-300 bg-gray-100 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-						placeholder="Case number"
-						value={data?.caseTypes.find((caseType) => caseType.caseType === case_type)
-							?.numberOfCases + 1}
-						disabled
+						id="clinic_name"
+						autocomplete="off"
+						bind:value={clinicInputValue}
+						oninput={filterClinics}
+						onfocus={() => {
+							showClinicDropdown = true;
+						}}
+						onblur={() => setTimeout(() => (showClinicDropdown = false), 200)}
+						required
+						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+						placeholder="Clinic name"
+					/>
+				</label>
+				{#if showClinicDropdown}
+					<ul
+						class="ring-opacity-5 absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black focus:outline-none"
+						tabindex="-1"
+						role="listbox"
+						aria-labelledby="clinic_name"
+					>
+						{#each filteredClinics as clinic}
+							<li
+								class="relative cursor-default py-2 pr-9 pl-3 text-gray-900 select-none hover:bg-indigo-600 hover:text-white"
+								id={`clinic-option-${clinic.clinicId}`}
+								role="option"
+								onclick={() => selectClinic(clinic)}
+								onkeydown={(event) => {
+									if (event.key === 'Enter') {
+										selectClinic(clinic);
+									}
+								}}
+							>
+								<span class="block truncate">{clinic.clinicName}</span>
+								{#if selectedClinic?.clinicId === clinic.clinicId}
+									<span class="absolute inset-y-0 right-0 flex items-center pr-2 text-indigo-600">
+										<svg
+											class="h-5 w-5"
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											aria-hidden="true"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+												clip-rule="evenodd"
+											></path>
+										</svg>
+									</span>
+								{/if}
+							</li>
+						{/each}
+						{#if filteredClinics.length === 0 && clinicInputValue.length > 0}
+							<li class="relative cursor-default py-2 pr-9 pl-3 text-gray-500 select-none">
+								No clinics found.
+							</li>
+						{/if}
+					</ul>
+				{/if}
+				<input type="hidden" name="clinic_name" value={selectedClinic?.clinicId} />
+			</div>
+
+			<!-- Doctor Selection -->
+			<div class="relative">
+				<label for="doctor_name" class="mb-2 block text-sm font-bold text-gray-700">
+					Doctor
+					<input
+						type="text"
+						id="doctor_name"
+						autocomplete="off"
+						bind:value={doctorInputValue}
+						oninput={filterDoctors}
+						onfocus={() => (showDoctorDropdown = selectedClinic != null)}
+						onblur={() => setTimeout(() => (showDoctorDropdown = false), 200)}
+						required
+						disabled={!selectedClinic}
+						class="block w-full appearance-none rounded-md border {selectedClinic
+							? 'border-gray-300'
+							: 'cursor-not-allowed border-dashed border-gray-300 bg-gray-100'} px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+						placeholder="Doctor name"
+					/>
+				</label>
+				{#if showDoctorDropdown}
+					<ul
+						class="ring-opacity-5 absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black focus:outline-none"
+						tabindex="-1"
+						role="listbox"
+						aria-labelledby="doctor_name"
+					>
+						{#each filteredDoctors as doctor}
+							<li
+								class="relative cursor-default py-2 pr-9 pl-3 text-gray-900 select-none hover:bg-indigo-600 hover:text-white"
+								id={`doctor-option-${doctor.doctorId}`}
+								role="option"
+								onclick={() => selectDoctor(doctor)}
+								onkeydown={(event) => {
+									if (event.key === 'Enter') {
+										selectDoctor(doctor);
+									}
+								}}
+							>
+								<span class="block truncate">{doctor.doctorName}</span>
+								{#if selectedDoctor?.doctorId === doctor.doctorId}
+									<span class="absolute inset-y-0 right-0 flex items-center pr-2 text-indigo-600">
+										<svg
+											class="h-5 w-5"
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											aria-hidden="true"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+												clip-rule="evenodd"
+											></path>
+										</svg>
+									</span>
+								{/if}
+							</li>
+						{/each}
+						{#if filteredDoctors.length === 0 && doctorInputValue.length > 0}
+							<li class="relative cursor-default py-2 pr-9 pl-3 text-gray-500 select-none">
+								No doctors found in this clinic.
+							</li>
+						{/if}
+					</ul>
+				{/if}
+				<input type="hidden" name="doctor_name" value={selectedDoctor?.doctorId} />
+			</div>
+
+			<!-- Patient Name -->
+			<div>
+				<label for="patient_name" class="mb-2 block text-sm font-bold text-gray-700">
+					Patient Name
+					<input
+						type="text"
+						name="patient_name"
+						placeholder="Patient name"
+						autocomplete="off"
+						required
+						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
 					/>
 				</label>
 			</div>
-			<div class="flex w-1/2 flex-col gap-4">
-				<div class="relative">
-					<label for="clinic_name" class="mb-2 block text-sm font-bold text-gray-700">
-						Clinic
-						<input
-							type="text"
-							id="clinic_name"
-							name="clinic_name"
-							autocomplete="off"
-							bind:value={clinicInputValue}
-							oninput={filterClinics}
-							onfocus={() => {
-								showClinicDropdown = true; // Show dropdown on focus
-							}}
-							onblur={() => setTimeout(() => (showClinicDropdown = false), 200)}
-							required
-							class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-							placeholder="Clinic name"
-						/>
-					</label>
-					{#if showClinicDropdown}
-						<ul
-							class="ring-opacity-5 absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black focus:outline-none"
-							tabindex="-1"
-							role="listbox"
-							aria-labelledby="clinic_name"
-						>
-							{#each filteredClinics as clinic}
-								<li
-									class="relative cursor-default py-2 pr-9 pl-3 text-gray-900 select-none hover:bg-indigo-600 hover:text-white"
-									id={`clinic-option-${clinic.clinicId}`}
-									role="option"
-									onclick={() => selectClinic(clinic)}
-									onkeydown={(event) => {
-										if (event.key === 'Enter') {
-											selectClinic(clinic);
-										}
-									}}
-								>
-									<span class="block truncate">{clinic.label}</span>
-									{#if selectedClinic?.value === clinic.value}
-										<span class="absolute inset-y-0 right-0 flex items-center pr-2 text-indigo-600">
-											<svg
-												class="h-5 w-5"
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												aria-hidden="true"
-											>
-												<path
-													fill-rule="evenodd"
-													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-													clip-rule="evenodd"
-												></path>
-											</svg>
-										</span>
-									{/if}
-								</li>
-							{/each}
-							{#if filteredClinics.length === 0 && clinicInputValue.length > 0}
-								<li class="relative cursor-default py-2 pr-9 pl-3 text-gray-500 select-none">
-									No clinics found.
-								</li>
-							{/if}
-						</ul>
-					{/if}
-					<input type="hidden" name="clinic_name" value={selectedClinic?.value} />
-				</div>
-
-				<div class="relative">
-					<label for="doctor_name" class="mb-2 block text-sm font-bold text-gray-700">
-						Doctor
-						<input
-							type="text"
-							id="doctor_name"
-							name="doctor_name"
-							autocomplete="off"
-							bind:value={doctorInputValue}
-							oninput={filterDoctors}
-							onfocus={() => (showDoctorDropdown = selectedClinic != null)}
-							onblur={() => setTimeout(() => (showDoctorDropdown = false), 200)}
-							required
-							disabled={!selectedClinic}
-							class="block w-full appearance-none rounded-md border {selectedClinic
-								? 'border-gray-300'
-								: 'cursor-not-allowed border-dashed border-gray-300 bg-gray-100'} px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-							placeholder="Doctor name"
-						/>
-					</label>
-					{#if showDoctorDropdown}
-						<ul
-							class="ring-opacity-5 absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black focus:outline-none"
-							tabindex="-1"
-							role="listbox"
-							aria-labelledby="doctor_name"
-						>
-							{#each filteredDoctors as doctor}
-								<li
-									class="relative cursor-default py-2 pr-9 pl-3 text-gray-900 select-none hover:bg-indigo-600 hover:text-white"
-									id={`doctor-option-${doctor.value}`}
-									role="option"
-									onclick={() => selectDoctor(doctor)}
-									onkeydown={(event) => {
-										if (event.key === 'Enter') {
-											selectDoctor(doctor);
-										}
-									}}
-								>
-									<span class="block truncate">{doctor.label}</span>
-									{#if selectedDoctor?.value === doctor.value}
-										<span class="absolute inset-y-0 right-0 flex items-center pr-2 text-indigo-600">
-											<svg
-												class="h-5 w-5"
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												aria-hidden="true"
-											>
-												<path
-													fill-rule="evenodd"
-													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-													clip-rule="evenodd"
-												></path>
-											</svg>
-										</span>
-									{/if}
-								</li>
-							{/each}
-							{#if filteredDoctors.length === 0 && doctorInputValue.length > 0}
-								<li class="relative cursor-default py-2 pr-9 pl-3 text-gray-500 select-none">
-									No doctors found in this clinic.
-								</li>
-							{/if}
-						</ul>
-					{/if}
-					<input type="hidden" name="doctor_name" value={selectedDoctor?.value} />
+			<!-- Jaw Selection -->
+			<div class="flex items-center justify-center">
+				<div class="inline-flex rounded-md border border-gray-200" role="group">
+					<button
+						type="button"
+						class="rounded-l-md px-2 py-3 text-xs font-medium {selected_jaw === 'upper'
+							? 'bg-indigo-600 text-white'
+							: 'bg-white text-gray-700 hover:bg-gray-50'}"
+						onclick={() => (selected_jaw = 'upper')}
+					>
+						Upper Only
+					</button>
+					<button
+						type="button"
+						class="border-r border-l px-2 text-xs font-medium {selected_jaw === 'U/L'
+							? 'bg-indigo-600 text-white'
+							: 'bg-white text-gray-700 hover:bg-gray-50'}"
+						onclick={() => (selected_jaw = 'U/L')}
+					>
+						Upper/Lower
+					</button>
+					<button
+						type="button"
+						class="rounded-r-md px-2 text-xs font-medium {selected_jaw === 'lower'
+							? 'bg-indigo-600 text-white'
+							: 'bg-white text-gray-700 hover:bg-gray-50'}"
+						onclick={() => (selected_jaw = 'lower')}
+					>
+						Lower Only
+					</button>
+					<input type="text" name="selected_jaw" bind:value={selected_jaw} hidden />
 				</div>
 			</div>
 		</div>
+
+		<!-- Second Row: Upper/Lower Sections -->
 		<div class="flex flex-col gap-4">
-			<label for="patient_name" class="mb-2 block text-sm font-bold text-gray-700">
-				Patient Name
-				<input
-					type="text"
-					name="patient_name"
-					placeholder="Patient name"
-					autocomplete="off"
-					required
-					class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-				/>
-			</label>
-			<label for="description" class="mb-2 block text-sm font-bold text-gray-700">
-				Description
-				<textarea
-					class="block h-24 w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-					name="description"
-					placeholder="Description"
-				></textarea>
-			</label>
+			<!-- Upper Section -->
+			{#if selected_jaw === 'U/L' || selected_jaw === 'upper'}
+				<div class="rounded-md border border-gray-200 p-4">
+					<h3 class="mb-3 text-sm font-bold text-gray-700">Upper</h3>
+					<div class="grid grid-cols-5 gap-4">
+						<!-- Case Type -->
+						<div>
+							<label for="case_type_upper" class="block text-sm font-medium text-gray-700">
+								Case type
+								<select
+									name="case_type_upper"
+									bind:value={case_type_upper}
+									required
+									class="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+								>
+									{#each data?.caseTypes as caseType}
+										<option value={caseType.caseTypeId}>{caseType.caseTypeName}</option>
+									{/each}
+								</select>
+							</label>
+						</div>
+
+						<!-- Case Number -->
+						<div>
+							<label for="case_number_upper" class="block text-sm font-medium text-gray-700">
+								Case number
+								<input
+									type="text"
+									name="case_number_upper"
+									class="mt-1 block w-full cursor-not-allowed appearance-none rounded-md border border-dashed border-gray-300 bg-gray-100 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+									placeholder="Case number"
+									value={next_case_upper}
+									disabled
+								/>
+								<input type="hidden" name="case_number_upper" value={next_case_upper} />
+							</label>
+						</div>
+						<!-- Description -->
+						<div>
+							<label for="upper_description" class="block text-sm font-medium text-gray-700">
+								Description
+								<textarea
+									name="upper_description"
+									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+									rows="1"
+								></textarea>
+							</label>
+						</div>
+						<!-- Unit -->
+						<div>
+							<label for="upper_unit" class="block text-sm font-medium text-gray-700">
+								Unit
+								<input
+									type="number"
+									id="upper_unit"
+									name="upper_unit"
+									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+									placeholder="Units"
+									min="1"
+									defaultValue="1"
+								/>
+							</label>
+						</div>
+
+						<!-- Cost -->
+						<div>
+							<label for="upper_cost" class="block text-sm font-medium text-gray-700">
+								Cost
+								<input
+									type="number"
+									id="upper_cost"
+									name="upper_cost"
+									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+									placeholder="Cost per unit"
+									min="0"
+									required
+								/>
+							</label>
+						</div>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Lower Section (Similar structure to Upper) -->
+			{#if selected_jaw === 'U/L' || selected_jaw === 'lower'}
+				<div class="rounded-md border border-gray-200 p-4">
+					<h3 class="mb-3 text-sm font-bold text-gray-700">Lower</h3>
+					<div class="grid grid-cols-5 gap-4">
+						<!-- Case Type -->
+						<div>
+							<label for="case_type_lower" class="block text-sm font-medium text-gray-700">
+								Case type
+								<select
+									name="case_type_lower"
+									bind:value={case_type_lower}
+									required
+									class="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+								>
+									{#each data?.caseTypes as caseType}
+										<option value={caseType.caseTypeId}>{caseType.caseTypeName}</option>
+									{/each}
+								</select>
+							</label>
+						</div>
+
+						<!-- Case Number -->
+						<div>
+							<label for="case_number_lower" class="block text-sm font-medium text-gray-700">
+								Case number
+								<input
+									type="text"
+									name="case_number_lower"
+									class="mt-1 block w-full cursor-not-allowed appearance-none rounded-md border border-dashed border-gray-300 bg-gray-100 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+									placeholder="Case number"
+									value={next_case_lower}
+									disabled
+								/>
+								<input type="hidden" name="case_number_lower" value={next_case_lower} />
+							</label>
+						</div>
+
+						<!-- Unit -->
+						<div>
+							<label for="lower_unit" class="block text-sm font-medium text-gray-700">
+								Unit
+								<input
+									type="number"
+									id="lower_unit"
+									name="lower_unit"
+									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+									placeholder="Units"
+									min="1"
+									defaultValue="1"
+								/>
+							</label>
+						</div>
+
+						<!-- Cost -->
+						<div>
+							<label for="lower_cost" class="block text-sm font-medium text-gray-700">
+								Cost
+								<input
+									type="number"
+									id="lower_cost"
+									name="lower_cost"
+									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+									placeholder="Cost per unit"
+									min="0"
+									required
+								/>
+							</label>
+						</div>
+
+						<!-- Description -->
+						<div>
+							<label for="lower_description" class="block text-sm font-medium text-gray-700">
+								Description
+								<textarea
+									name="lower_description"
+									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+									rows="1"
+								></textarea>
+							</label>
+						</div>
+					</div>
+				</div>
+			{/if}
 		</div>
-		<div class="flex flex-row justify-between gap-8">
-			<div class="flex w-fit flex-col rounded-md border border-gray-300 p-6">
+
+		<!-- Third Row: Image and Payment -->
+		<div class="grid grid-cols-2 gap-4">
+			<!-- IN Image Column -->
+			<div class="rounded-md border border-gray-200 p-4">
 				<div class="mb-2 flex flex-col gap-2">
 					<label class="block text-sm font-bold text-gray-700"> IN Image </label>
+					{#if !show_in}
+						<p class="mb-2 text-sm text-gray-500">No image uploaded yet</p>
+					{/if}
 					<div class="flex gap-2">
 						<button
 							type="button"
 							class="flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
 							onclick={async () => {
 								try {
-									// Check if the browser supports getUserMedia
 									if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
 										throw new Error("Your browser doesn't support camera access");
 									}
@@ -429,27 +644,14 @@
 						<label
 							class="flex cursor-pointer items-center justify-center rounded-md bg-gray-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600"
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								class="mr-2 h-5 w-5"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-							Upload File
 							<input
 								type="file"
 								name="in-img"
+								class="w-24"
 								accept="image/*"
 								bind:this={in_file}
 								onchange={handleInImageChange}
 								required
-								class="hidden"
 							/>
 						</label>
 					</div>
@@ -488,60 +690,48 @@
 					</label>
 				</div>
 			</div>
-			<div class="flex w-1/2 flex-col gap-4">
-				<label
-					for="total_amount"
-					class="mb-2 block text-sm font-bold
-          text-gray-700"
-				>
-					Total amount
-					<input
-						type="number"
-						bind:value={total_amount}
-						name="total_amount"
-						placeholder="Total amount"
-						accept="number"
-						required
-						autocomplete="off"
-						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-					/>
-				</label>
-				<label for="paid_amount" class="mb-2 block text-sm font-bold text-gray-700">
-					Paid amount
-					<input
-						type="number"
-						bind:value={paid_amount}
-						name="paid_amount"
-						placeholder="Paid amount"
-						autocomplete="off"
-						required
-						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-					/>
-				</label>
-				<label for="excess_payment" class="mb-2 block text-sm font-bold text-gray-700">
-					Excess amount
-					<input
-						type="text"
-						value={paid_amount && total_amount
-							? paid_amount - total_amount
-							: total_amount !== undefined
-								? -total_amount
-								: ''}
-						name="excess_payment"
-						placeholder="Excess amount"
-						disabled
-						class="block w-full cursor-not-allowed appearance-none rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-					/>
-					<input
-						type="hidden"
-						value={paid_amount && total_amount
-							? paid_amount - total_amount
-							: total_amount !== undefined
-								? -total_amount
-								: ''}
-						name="excess_payment"
-					/>
-				</label>
+
+			<!-- Payment Information Column -->
+			<div class="rounded-md border border-gray-200 p-4">
+				<h3 class="mb-3 text-sm font-bold text-gray-700">Payment Information</h3>
+
+				<!-- Total Amount -->
+				<div class="mb-4">
+					<label for="total_amount" class="mb-2 block text-sm font-bold text-gray-700">
+						Total Amount
+						<input
+							type="number"
+							id="total_amount"
+							name="total_amount"
+							bind:value={total_amount}
+							class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+							placeholder="0.00"
+							min="0"
+							step="0.01"
+							required
+						/>
+					</label>
+				</div>
+
+				<!-- Paid Amount -->
+				<div class="mb-4">
+					<label for="paid_amount" class="mb-2 block text-sm font-bold text-gray-700">
+						Paid Amount
+						<input
+							type="number"
+							id="paid_amount"
+							name="paid_amount"
+							bind:value={paid_amount}
+							class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+							placeholder="0.00"
+							min="0"
+							step="0.01"
+							required
+						/>
+					</label>
+				</div>
+
+				<!-- Payment Method -->
 				<div class="mb-4">
 					<label for="payment_method" class="mb-2 block text-sm font-bold text-gray-700">
 						Payment Method
@@ -549,8 +739,7 @@
 					<select
 						name="payment_method"
 						bind:value={payment_method}
-						class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
-						required
+						class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
 					>
 						<option value="cash">Cash</option>
 						<option value="gcash">GCash</option>
@@ -558,31 +747,11 @@
 						<option value="others">Others</option>
 					</select>
 				</div>
-
-				{#if payment_method === 'others'}
-					<div class="mb-4">
-						<label for="other_payment_method" class="mb-2 block text-sm font-bold text-gray-700">
-							Specify Payment Method
-						</label>
-						<input
-							type="text"
-							bind:value={other_payment_method}
-							name="other_payment_method"
-							placeholder="Enter payment method"
-							required
-							class="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
-						/>
-					</div>
-				{/if}
-
-				<input
-					hidden
-					name="final_payment_method"
-					value={payment_method === 'others' ? other_payment_method : payment_method}
-				/>
 			</div>
 		</div>
-		<div class="flex flex-col items-center justify-center">
+
+		<!-- Submit Button -->
+		<div class="flex flex-col items-center justify-center pt-4">
 			<button
 				class="rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
 				type="submit">Add Record</button
@@ -637,7 +806,7 @@
 {/if}
 
 {#if showSettingsModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+	<div class="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
 		<div class="w-96 rounded-lg bg-white p-6 shadow-xl">
 			<div class="mb-4 flex justify-between">
 				<h3 class="text-lg font-medium text-gray-900">Camera Access Required</h3>
@@ -657,11 +826,10 @@
 				</button>
 			</div>
 			<div class="mb-4">
-				<p class="text-sm text-gray-500">
-					To use the camera feature, you need to:
-				</p>
+				<p class="text-sm text-gray-500">To use the camera feature, you need to:</p>
 				<ol class="mt-2 list-decimal pl-4 text-sm text-gray-600">
-					<li class="mb-2">Open Chrome settings by copying this URL:
+					<li class="mb-2">
+						Open Chrome settings by copying this URL:
 						<code class="ml-2 rounded bg-gray-100 px-2 py-1 text-sm">
 							chrome://flags/#unsafely-treat-insecure-origin-as-secure
 						</code>
@@ -682,7 +850,9 @@
 					type="button"
 					class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
 					onclick={() => {
-						navigator.clipboard.writeText('chrome://flags/#unsafely-treat-insecure-origin-as-secure');
+						navigator.clipboard.writeText(
+							'chrome://flags/#unsafely-treat-insecure-origin-as-secure'
+						);
 						alert('URL copied to clipboard!');
 					}}
 				>

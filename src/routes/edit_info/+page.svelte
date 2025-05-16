@@ -8,10 +8,19 @@
 
 	let doctorsWithClinic = $derived(
 		doctors.map((doctor) => ({
+			id: doctor.value,
 			name: doctor.label,
 			clinicId: doctor.clinicId,
-			clinicName:
-				clinics.find((clinic) => clinic.clinicId === doctor.clinicId)?.label || 'Unknown Clinic'
+			clinicName: doctor.clinicName || 'Unknown Clinic'
+		}))
+	);
+
+	// Update case types state
+	let caseTypes = $state(
+		data.caseTypes.map((ct) => ({
+			caseTypeId: ct.caseTypeId,
+			caseTypeName: ct.caseTypeName,
+			numberOfCases: ct.numberOfCases
 		}))
 	);
 
@@ -25,13 +34,10 @@
 	let success = form?.success ?? false;
 	let message = form?.message ?? '';
 
-	// Add these new state variables
-	let caseTypes = $state(data.caseTypes || []);
 	let newCaseType = $state('');
-
-	// Add to your script section at the top
+	// Add these new state variables
 	let newField = $state('');
-	let selectedCaseType: { caseTypeId: number; caseType: string } | null = $state(null);
+	let selectedCaseType = $state(null);
 	let showFieldInput = $state(false);
 
 	$effect(() => {
@@ -96,6 +102,16 @@
 		selectedCaseType = selectedCaseType?.caseTypeId === caseType.caseTypeId ? null : caseType;
 		showFieldInput = selectedCaseType !== null;
 		newField = '';
+	}
+
+	// Update delete doctor handler to use doctorId instead of clinicId
+	function handleDeleteDoctor(doctorId: string) {
+		return {
+			action: '?/deleteDoctor',
+			data: {
+				doctor_id: doctorId
+			}
+		};
 	}
 </script>
 
@@ -180,7 +196,7 @@
 						<td class="px-6 py-2 text-sm whitespace-nowrap text-gray-500">{doctor.clinicName}</td>
 						<td class="px-6 py-2 text-right text-sm font-medium whitespace-nowrap">
 							<form action="?/deleteDoctor" method="post">
-								<input type="hidden" name="doctor_id" value={doctor.clinicId} />
+								<input type="hidden" name="doctor_id" value={doctor.id} />
 								<button
 									type="submit"
 									class="inline-flex items-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none"
@@ -231,11 +247,45 @@
 			</tbody>
 		</table>
 
+		<!-- New section for adding only a clinic -->
+		<form method="POST" action="?/addClinic" class="mt-8 w-lg space-y-4">
+			<div>
+				<h3 class="text-lg font-medium text-gray-900">Add New Clinic</h3>
+				<div class="mt-4">
+					<label for="clinic_name_only" class="block text-sm font-medium text-gray-700"
+						>Clinic Name</label
+					>
+					<div class="mt-1">
+						<input
+							type="text"
+							name="clinic_name"
+							id="clinic_name_only"
+							class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+							placeholder="Enter clinic name"
+							required
+						/>
+					</div>
+				</div>
+				<div class="mt-4">
+					<button
+						type="submit"
+						class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+					>
+						Add Clinic Only
+					</button>
+				</div>
+			</div>
+		</form>
+
+		<!-- Update the existing combined form title -->
 		<form
 			method="POST"
 			action="?/{isNewClinic ? 'addClinicAndDoctor' : 'addDoctor'}"
 			class="mt-8 w-lg space-y-4"
 		>
+			<h3 class="text-lg font-medium text-gray-900">
+				{isNewClinic ? 'Add New Clinic with Doctor' : 'Add Doctor to Existing Clinic'}
+			</h3>
 			<div>
 				<label for="clinic_name" class="block text-sm font-medium text-gray-700"> Clinic </label>
 				<div class="relative mt-1">
@@ -248,6 +298,7 @@
 						onfocus={handleClinicInputFocus}
 						onblur={handleClinicInputBlur}
 						oninput={handleNewClinicInput}
+						autocomplete="off"
 						required
 					/>
 					{#if (isClinicInputFocused || newClinicSearch) && filteredClinics.length > 0}
@@ -283,7 +334,6 @@
 						bind:value={newDoctorName}
 						class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 						placeholder="Enter doctor's name"
-						required
 					/>
 				</div>
 			</div>
@@ -291,7 +341,6 @@
 				<button
 					type="submit"
 					class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
-					onclick={handleAddDoctor}
 				>
 					Add
 				</button>
@@ -349,7 +398,7 @@
 					{#each caseTypes as caseType}
 						<tr>
 							<td class="px-6 py-2 text-sm font-medium whitespace-nowrap text-gray-900">
-								{caseType.caseType}
+								{caseType.caseTypeName}
 							</td>
 							<td class="px-6 py-2 text-right text-sm font-medium whitespace-nowrap">
 								<form action="?/deleteCaseType" method="post">

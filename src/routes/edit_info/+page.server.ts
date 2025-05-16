@@ -4,21 +4,48 @@ import { clinics, doctors, caseTypes } from '$lib/server/db/schema';
 import { desc, eq, sql } from 'drizzle-orm';
 
 export const load = (async () => {
-  const doctorsData = (await db.select().from(doctors).orderBy(desc(doctors.doctorName))).map((doctor) => ({
-    value: doctor.doctorName,
-    label: doctor.doctorName,
-    clinicId: doctor.clinicId
-  })),
-    clinicsData = (await db.select().from(clinics).orderBy(desc(clinics.clinicName))).map((clinic) => ({
-      value: clinic.clinicName,
-      label: clinic.clinicName,
-      clinicId: clinic.clinicId
-    })),
-    caseTypesData = await db.select().from(caseTypes).orderBy(caseTypes.caseType);
+  const [doctorsData, clinicsData, caseTypesData] = await Promise.all([
+    db
+      .select({
+        doctorId: doctors.doctorId,
+        doctorName: doctors.doctorName,
+        clinicId: doctors.clinicId,
+        clinicName: clinics.clinicName
+      })
+      .from(doctors)
+      .leftJoin(clinics, eq(doctors.clinicId, clinics.clinicId))
+      .orderBy(desc(doctors.doctorName)),
+
+    db
+      .select({
+        clinicId: clinics.clinicId,
+        clinicName: clinics.clinicName
+      })
+      .from(clinics)
+      .orderBy(desc(clinics.clinicName)),
+
+    db
+      .select({
+        caseTypeId: caseTypes.caseTypeId,
+        caseTypeName: caseTypes.caseTypeName,
+        numberOfCases: caseTypes.numberOfCases
+      })
+      .from(caseTypes)
+      .orderBy(caseTypes.caseTypeName)
+  ]);
 
   return {
-    doctors: doctorsData,
-    clinics: clinicsData,
+    doctors: doctorsData.map(d => ({
+      value: d.doctorId.toString(),
+      label: d.doctorName,
+      clinicId: d.clinicId,
+      clinicName: d.clinicName
+    })),
+    clinics: clinicsData.map(c => ({
+      value: c.clinicId.toString(),
+      label: c.clinicName,
+      clinicId: c.clinicId
+    })),
     caseTypes: caseTypesData
   };
 }) satisfies PageServerLoad;
@@ -106,7 +133,7 @@ export const actions = {
 
     if (doctorIdToDelete) {
       try {
-        await db.delete(doctors).where(eq(doctors.clinicId, parseInt(doctorIdToDelete))); // Assuming doctor_id in the form corresponds to clinicId in doctors table based on previous code
+        await db.delete(doctors).where(eq(doctors.doctorId, parseInt(doctorIdToDelete))); // Assuming doctor_id in the form corresponds to clinicId in doctors table based on previous code
         return { success: true, message: `Doctor with ID ${doctorIdToDelete} deleted successfully` };
       } catch (error) {
         console.error('Error deleting doctor:', error);
@@ -169,7 +196,7 @@ export const actions = {
     }
 
     try {
-      await db.delete(caseTypes).where(eq(caseTypes.caseTypeId, caseTypeId));
+      await db.delete(caseTypes).where(eq(caseTypes.caseTypeId, parseInt(caseTypeId)));
 
       return {
         success: true,

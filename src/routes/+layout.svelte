@@ -43,6 +43,7 @@
 			<button
 				onclick={() => {
 					window.location.reload();
+					window.location.href = '/';
 				}}
 				class="text-lg font-bold transition-colors duration-200 hover:cursor-pointer hover:text-[#A1AEB3]"
 			>
