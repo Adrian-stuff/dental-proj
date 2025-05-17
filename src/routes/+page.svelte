@@ -93,6 +93,19 @@
 			console.log('Delete record:', recordId);
 		}
 	}
+
+	// Computed totals
+	let totalOrderAmount = $derived(() => {
+		if (!data.records || data.records.length === 0) return '0.00';
+		const total = data.records.reduce((sum, record) => sum + (Number(record.orderTotal) || 0), 0);
+		return total.toFixed(2);
+	});
+
+	let totalPaidAmount = $derived(() => {
+		if (!data.records || data.records.length === 0) return '0.00';
+		const total = data.records.reduce((sum, record) => sum + (Number(record.paidAmount) || 0), 0);
+		return total.toFixed(2);
+	});
 </script>
 
 <!-- Filter Form -->
@@ -491,6 +504,16 @@
 						</tr>
 					{/each}
 				</tbody>
+				{#if Object.keys(data.filters).length > 0}
+					<tfoot>
+						<tr class="border-t-2 border-gray-300 bg-gray-50 font-medium">
+							<td colspan={showDelete ? 6 : 5} class="px-3 py-2 text-right text-xs"> Total: </td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap">₱{totalOrderAmount()}</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap">₱{totalPaidAmount()}</td>
+							<td colspan={showDelete ? 2 : 1}></td>
+						</tr>
+					</tfoot>
+				{/if}
 			</table>
 		</div>
 
