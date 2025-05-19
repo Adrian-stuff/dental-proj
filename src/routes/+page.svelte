@@ -106,6 +106,11 @@
 		const total = data.records.reduce((sum, record) => sum + (Number(record.paidAmount) || 0), 0);
 		return total.toFixed(2);
 	});
+
+	let totalBalance = $derived(() => {
+		const total = Number(totalOrderAmount()) - Number(totalPaidAmount());
+		return total.toFixed(2);
+	});
 </script>
 
 <!-- Filter Form -->
@@ -417,6 +422,12 @@
 							scope="col"
 							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
 						>
+							Balance
+						</th>
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
+						>
 							Status
 						</th>
 						<th
@@ -488,6 +499,9 @@
 							</td>
 							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
 								₱{record.paidAmount}
+							</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
+								-₱{(Number(record.orderTotal) - Number(record.paidAmount)).toFixed(2)}
 							</td>
 							<td class="px-3 py-2 text-xs whitespace-nowrap">
 								<span class="flex flex-col gap-0.5">
@@ -564,6 +578,7 @@
 							<td colspan={showDelete ? 6 : 5} class="px-3 py-2 text-right text-xs"> Total: </td>
 							<td class="px-3 py-2 text-xs whitespace-nowrap">₱{totalOrderAmount()}</td>
 							<td class="px-3 py-2 text-xs whitespace-nowrap">₱{totalPaidAmount()}</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap">-₱{totalBalance()}</td>
 							<td colspan={showDelete ? 2 : 1}></td>
 						</tr>
 					</tfoot>

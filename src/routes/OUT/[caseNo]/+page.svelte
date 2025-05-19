@@ -59,6 +59,8 @@
 
 			if (videoElement) {
 				videoElement.srcObject = stream;
+				// Add event listener when camera starts
+				window.addEventListener('keydown', handleKeyPress);
 				await new Promise((resolve) => {
 					videoElement.onloadedmetadata = () => resolve(true);
 				});
@@ -103,6 +105,15 @@
 	function closeCameraModal() {
 		showCameraModal = false;
 		stopCamera();
+		// Remove event listener when modal closes
+		window.removeEventListener('keydown', handleKeyPress);
+	}
+
+	function handleKeyPress(e: KeyboardEvent) {
+		if (e.code === 'Space' && showCameraModal) {
+			e.preventDefault();
+			captureImage();
+		}
 	}
 
 	function closeSettingsModal() {
