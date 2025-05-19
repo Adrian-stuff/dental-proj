@@ -144,7 +144,7 @@
 							<input type="text" name="clinic_id" bind:value={selectedClinicId} hidden />
 							{#if showAllClinics || (clinicSearch && filteredClinics.length > 0 && !selectedClinicName)}
 								<div
-									class="absolute z-10 mt-0.5 max-h-40 w-full overflow-auto rounded-md border bg-white shadow-lg"
+									class="absolute z-99 mt-0.5 max-h-40 w-full overflow-auto rounded-md border bg-white shadow-lg"
 								>
 									{#each showAllClinics ? data.clinics : filteredClinics as clinic}
 										<button
