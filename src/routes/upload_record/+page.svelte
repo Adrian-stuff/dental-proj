@@ -546,7 +546,17 @@
 								<input type="hidden" name="case_number_lower" value={next_case_lower} />
 							</label>
 						</div>
-
+<!-- Description -->
+						<div>
+							<label for="lower_description" class="block text-sm font-medium text-gray-700">
+								Description
+								<textarea
+									name="lower_description"
+									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+									rows="1"
+								></textarea>
+							</label>
+						</div>
 						<!-- Unit -->
 						<div>
 							<label for="lower_unit" class="block text-sm font-medium text-gray-700">
@@ -579,17 +589,7 @@
 							</label>
 						</div>
 
-						<!-- Description -->
-						<div>
-							<label for="lower_description" class="block text-sm font-medium text-gray-700">
-								Description
-								<textarea
-									name="lower_description"
-									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-									rows="1"
-								></textarea>
-							</label>
-						</div>
+						
 					</div>
 				</div>
 			{/if}
@@ -782,7 +782,7 @@
 				</button>
 			</div>
 			<div class="relative">
-				<video bind:this={videoElement} autoplay playsinline class="rounded-lg"></video>
+				<video bind:this={videoElement} autoplay playsinline class="rounded-lg max-w-78"></video>
 				<canvas bind:this={canvasElement} class="hidden"></canvas>
 			</div>
 			<div class="mt-4 flex justify-end gap-2">

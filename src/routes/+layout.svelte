@@ -19,6 +19,8 @@
 				return 'Edit Info';
 			case '/upload_record':
 				return 'Add Record';
+			case '/data':
+				return 'Data';
 
 			default:
 				return 'Dental Records';
@@ -76,6 +78,10 @@
 		<div class="top-7 right-5 hidden justify-between gap-2 md:flex">
 			<a
 				class="rounded border border-[#A1AEB3] bg-[#4B5563] p-2 text-white shadow-sm hover:bg-[#374151] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
+				href="/data">DATA</a
+			>
+			<a
+				class="rounded border border-[#A1AEB3] bg-[#4B5563] p-2 text-white shadow-sm hover:bg-[#374151] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
 				href="/sales">SALES</a
 			>
 			<a
@@ -102,6 +108,10 @@
 	<div
 		class={`${isMenuOpen ? 'block' : 'hidden'} bg-[#164154] px-4 py-2 text-white shadow-md md:hidden`}
 	>
+		<a
+			class="mb-2 block rounded border border-[#A1AEB3] bg-[#4B5563] p-2 text-white shadow-sm hover:bg-[#374151] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
+			href="/data">DATA</a
+		>
 		<a
 			class="mb-2 block rounded border border-[#A1AEB3] bg-[#4B5563] p-2 text-white shadow-sm hover:bg-[#374151] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
 			href="/sales">SALES</a

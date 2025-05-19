@@ -419,6 +419,18 @@
 						>
 							Status
 						</th>
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800 print:hidden"
+						>
+							Actions
+						</th>
+						<th
+							scope="col"
+							class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800 print:hidden"
+						>
+							History
+						</th>
 						{#if showDelete}
 							<th
 								scope="col"
@@ -487,6 +499,48 @@
 										{record.paymentStatus}
 									</span>
 								</span>
+							</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap print:hidden">
+								<div class="flex gap-1.5">
+									<a
+										href={`/details/${record.recordId}`}
+										class="inline-flex items-center rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-700/10 hover:bg-blue-100"
+									>
+										View
+									</a>
+									<a
+										href={`/IN/${record.recordId}`}
+										class="inline-flex items-center rounded bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-green-700/10 hover:bg-green-100"
+									>
+										In
+									</a>
+									<a
+										href={`/OUT/${record.recordId}`}
+										class="inline-flex items-center rounded bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-yellow-700/10 hover:bg-yellow-100"
+									>
+										Out
+									</a>
+									<a
+										href={`/EDIT/${record.recordId}`}
+										class="inline-flex items-center rounded bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-purple-700/10 hover:bg-purple-100"
+									>
+										Edit
+									</a>
+									<a
+										href={`/AMOUNT/${record.recordId}`}
+										class="inline-flex items-center rounded bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-indigo-700/10 hover:bg-indigo-100"
+									>
+										Amount
+									</a>
+								</div>
+							</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap print:hidden">
+								<a
+									href={`/history/${record.recordId}`}
+									class="inline-flex items-center rounded bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-700/10 hover:bg-gray-100"
+								>
+									History
+								</a>
 							</td>
 							{#if showDelete}
 								<td class="px-3 py-2 text-sm font-medium whitespace-nowrap print:hidden">
