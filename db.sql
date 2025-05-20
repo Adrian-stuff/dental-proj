@@ -103,16 +103,16 @@ CREATE INDEX idx_records_date_pickup ON records (date_pickup);
 CREATE INDEX idx_records_doctor_id ON records (doctor_id);
 
 -- Sample Data Insertion
-INSERT INTO clinics (clinic_name)
-VALUES
-    ('St. Jude Clinic'),
-    ('Metro Medical Center');
+-- INSERT INTO clinics (clinic_name)
+-- VALUES
+--     ('St. Jude Clinic'),
+--     ('Metro Medical Center');
 
-INSERT INTO doctors (doctor_name, clinic_id)
-VALUES
-    ('Dr. Ana Reyes', (SELECT clinic_id FROM clinics WHERE clinic_name = 'St. Jude Clinic')),
-    ('Dr. Ben Cruz', (SELECT clinic_id FROM clinics WHERE clinic_name = 'St. Jude Clinic')),
-    ('Dr. Carla Diaz', (SELECT clinic_id FROM clinics WHERE clinic_name = 'Metro Medical Center'));
+-- INSERT INTO doctors (doctor_name, clinic_id)
+-- VALUES
+--     ('Dr. Ana Reyes', (SELECT clinic_id FROM clinics WHERE clinic_name = 'St. Jude Clinic')),
+--     ('Dr. Ben Cruz', (SELECT clinic_id FROM clinics WHERE clinic_name = 'St. Jude Clinic')),
+--     ('Dr. Carla Diaz', (SELECT clinic_id FROM clinics WHERE clinic_name = 'Metro Medical Center'));
 
 -- -- Modified INSERT INTO records to use clinic and doctor names directly.
 -- INSERT INTO records (case_type, date_pickup, doctor_name, clinic_name, patient_name, total_amount, paid_amount)

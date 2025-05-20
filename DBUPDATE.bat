@@ -10,7 +10,7 @@ set PGHOST=localhost
 set PGPORT=5432
 set PGDATABASE=dental
 set PGUSER=postgres
-set PGPASSWORD=adrian143
+set PGPASSWORD=rosislife143
 
 echo Running database updates...
 

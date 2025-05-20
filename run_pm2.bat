@@ -1,2 +1,1 @@
-@echo off
-bun run preview --host
+pm2 resurrect

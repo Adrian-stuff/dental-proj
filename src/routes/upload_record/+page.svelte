@@ -129,6 +129,8 @@
 
 			if (videoElement) {
 				videoElement.srcObject = stream;
+				// Add event listener when camera starts
+				window.addEventListener('keydown', handleKeyPress);
 				// Wait for video to be ready
 				await new Promise((resolve) => {
 					videoElement.onloadedmetadata = () => {
@@ -177,6 +179,15 @@
 	function closeCameraModal() {
 		showCameraModal = false;
 		stopCamera();
+		// Remove event listener when modal closes
+		window.removeEventListener('keydown', handleKeyPress);
+	}
+
+	function handleKeyPress(e: KeyboardEvent) {
+		if (e.code === 'Space' && showCameraModal) {
+			e.preventDefault();
+			captureImage();
+		}
 	}
 
 	function closeSettingsModal() {
@@ -226,6 +237,20 @@
 
 	console.log('doctors', data?.doctors);
 	console.log('clinics', data?.clinics);
+	
+	let isSubmitting = $state(false);
+	
+	function handleSubmit(e: SubmitEvent) {
+		if (isSubmitting) {
+			e.preventDefault();
+			return;
+		}
+		
+		isSubmitting = true;
+		setTimeout(() => {
+			isSubmitting = false;
+		}, 2000); // Reset after 2 seconds
+	}
 </script>
 
 <div class=" flex justify-center px-4 md:px-8">
@@ -233,6 +258,7 @@
 		class="mb-4 flex w-full flex-col gap-6 rounded-md bg-white p-6 shadow-md md:max-w-[1200px]"
 		method="POST"
 		enctype="multipart/form-data"
+		onsubmit={handleSubmit}
 	>
 		<h2 class="text-center text-2xl font-semibold text-gray-800">Add New Record</h2>
 
@@ -753,8 +779,12 @@
 		<!-- Submit Button -->
 		<div class="flex flex-col items-center justify-center pt-4">
 			<button
-				class="rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-				type="submit">Add Record</button
+				class="rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+				type="submit"
+				disabled={isSubmitting}
+			>
+				{isSubmitting ? 'Submitting...' : 'Add Record'}
+			</button
 			>
 			{#if form?.success}
 				<p class="mt-2 font-semibold text-green-500">{form.success}</p>
