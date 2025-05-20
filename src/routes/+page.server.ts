@@ -101,14 +101,14 @@ export const load: PageServerLoad = async ({ params, url }) => {
           orderItems: sql<Array<{
             caseTypeName: string,
             caseNo: number,
-            description: string | null,
+            orderDescription: string | null,
             upOrDown: string
           }>>`
           array_agg(
             json_build_object(
               'caseTypeName', ${caseTypes.caseTypeName},
               'caseNo', ${orderItems.caseNo},
-              'description', ${orderItems.orderDescription},
+              'orderDescription', ${orderItems.orderDescription},
               'upOrDown', ${orderItems.upOrDown}
             )
           )`
