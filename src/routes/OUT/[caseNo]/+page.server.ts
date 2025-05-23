@@ -57,7 +57,13 @@ export const actions = {
       console.error('Error processing OUT record:', error);
       return { success: false, error: 'Failed to process OUT record' };
     }
-    redirect(303, `/history/${recordId}`);
+    
+    const isFinished = data.get("finished");
+    if (isFinished) {
+      redirect(303, `/invoice/${recordId}`);
+    } else {
+      redirect(303, `/history/${recordId}`);
+    }
 
   }
 };

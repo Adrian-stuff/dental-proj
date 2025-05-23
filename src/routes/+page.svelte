@@ -523,6 +523,12 @@
 										View
 									</a>
 									<a
+										href={`/invoice/${record.recordId}`}
+										class="inline-flex items-center rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-700/10 hover:bg-blue-100"
+									>
+										Invoice
+									</a>
+									<a
 										href={`/IN/${record.recordId}`}
 										class="inline-flex items-center rounded bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-green-700/10 hover:bg-green-100"
 									>
