@@ -113,10 +113,10 @@
 <!-- Horizontal Divider -->
 <div class="divider">
 	<div class="scissor-line">
-		<span
+		<!-- <span
 			>✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 			- - - -</span
-		>
+		> -->
 	</div>
 </div>
 
