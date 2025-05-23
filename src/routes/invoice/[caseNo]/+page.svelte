@@ -5,6 +5,12 @@
 
 	let { data, form }: PageProps = $props();
 	let { invoice } = data;
+
+	// Add this function to format the case number
+	const formatCaseNumber = (num: string) => {
+		return num.padStart(5, '0');
+	};
+
 	const currentDate = new Date(invoice.date);
 
 	let subtotal = +invoice.total_amount || 0;
@@ -31,7 +37,7 @@
 		</div>
 		<div class="invoice-number">
 			<h1>SERVICE INVOICE</h1>
-			<p>№ {invoice.case_no}</p>
+			<p>№ {formatCaseNumber(invoice.case_no.toString())}</p>
 		</div>
 	</div>
 
@@ -76,7 +82,7 @@
 			<tr>
 				<th>QTY</th>
 				<th>UNIT</th>
-				<th>DESCRIPTION / NATURE OF SERVICE</th>
+				<th>CASE TYPE / DESCRIPTION</th>
 				<th>UNIT COST/ PRICE</th>
 				<th>AMOUNT</th>
 			</tr>
@@ -129,7 +135,7 @@
 		</div>
 		<div class="invoice-number">
 			<h1>SERVICE INVOICE</h1>
-			<p>№ {invoice.case_no}</p>
+			<p>№ {formatCaseNumber(invoice.case_no.toString())}</p>
 		</div>
 	</div>
 
@@ -174,7 +180,7 @@
 			<tr>
 				<th>QTY</th>
 				<th>UNIT</th>
-				<th>DESCRIPTION / NATURE OF SERVICE</th>
+				<th>CASE TYPE / DESCRIPTION</th>
 				<th>UNIT COST/ PRICE</th>
 				<th>AMOUNT</th>
 			</tr>
