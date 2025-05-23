@@ -22,7 +22,9 @@
 	// Handle date changes
 	function handleDateChange(event: Event, field: 'startDate' | 'endDate') {
 		const input = event.target as HTMLInputElement;
-		const value = input.value + '-01'; // Add day for proper date format
+		const value = data.selectedPeriod === 'month' 
+			? input.value + '-01'  // Add day for month view
+			: input.value;         // Use full date for daily view
 		updateFilters({ [field]: value });
 	}
 
@@ -40,10 +42,23 @@
 		}).format(amount);
 	};
 
+	function getMonthStart(date: Date): string {
+		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+	}
+
+	function getMonthEnd(date: Date): string {
+		// Get last day of current month
+		const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+		return `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+	}
+
 	// Handle date format for input
 	const formatDateForInput = (dateString: string) => {
 		const date = new Date(dateString);
-		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+		if (data.selectedPeriod === 'month') {
+			return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+		}
+		return dateString || getMonthStart(new Date()); // Provide default if empty
 	};
 
 	// Add reactive statement to update charts when data changes
@@ -98,6 +113,14 @@
 						}
 					},
 					x: {
+						type: data.selectedPeriod === 'day' ? 'time' : 'category',
+						time: {
+							unit: data.selectedPeriod === 'day' ? 'day' : 'month',
+							displayFormats: {
+								day: 'MMM d, yyyy',
+								month: 'MMM yyyy'
+							}
+						},
 						ticks: {
 							maxRotation: 45,
 							minRotation: 45
@@ -228,20 +251,24 @@
 		<div>
 			<label for="startDate" class="font-medium">Start Date:</label>
 			<input
-				type="month"
+				type={data.selectedPeriod === 'month' ? 'month' : 'date'}
 				id="startDate"
 				class="ml-2 rounded border p-2"
-				value={formatDateForInput(data.dateRange.start)}
+				value={data.selectedPeriod === 'month' 
+					? formatDateForInput(data.dateRange.start || getMonthStart(new Date()))
+					: (data.dateRange.start || getMonthStart(new Date()))}
 				on:change={(e) => handleDateChange(e, 'startDate')}
 			/>
 		</div>
 		<div>
 			<label for="endDate" class="font-medium">End Date:</label>
 			<input
-				type="month"
+				type={data.selectedPeriod === 'month' ? 'month' : 'date'}
 				id="endDate"
 				class="ml-2 rounded border p-2"
-				value={data.dateRange.end.substring(0, 7)}
+				value={data.selectedPeriod === 'month'
+					? formatDateForInput(data.dateRange.end || getMonthEnd(new Date()))
+					: (data.dateRange.end || getMonthEnd(new Date()))}
 				on:change={(e) => handleDateChange(e, 'endDate')}
 			/>
 		</div>
