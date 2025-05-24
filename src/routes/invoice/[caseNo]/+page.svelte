@@ -137,7 +137,7 @@
 				<p>Non-VAT Reg TIN: 341-948-594-00000</p>
 			</div>
 		</div>
-		s
+
 		<div class="invoice-number">
 			<h1>SERVICE INVOICE</h1>
 			<p>№ {formatCaseNumber(invoice.record_id.toString())}</p>
