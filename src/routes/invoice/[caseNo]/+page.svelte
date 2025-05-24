@@ -37,7 +37,7 @@
 		</div>
 		<div class="invoice-number">
 			<h1>SERVICE INVOICE</h1>
-			<p>№ {formatCaseNumber(invoice.case_no.toString())}</p>
+			<p>№ {formatCaseNumber(invoice.record_id.toString())}</p>
 		</div>
 	</div>
 
@@ -49,7 +49,11 @@
 			</div>
 			<div class="info-row">
 				<label>Case No.:</label>
-				<input type="text" value={invoice.case_no} readonly />
+				<input
+					type="text"
+					value={`${invoice.items.map((item) => `${item.case_no}`).join(' & ')}`}
+					readonly
+				/>
 			</div>
 			<div class="info-row">
 				<label>Name of Patient:</label>
@@ -136,7 +140,7 @@
 		s
 		<div class="invoice-number">
 			<h1>SERVICE INVOICE</h1>
-			<p>№ {formatCaseNumber(invoice.case_no.toString())}</p>
+			<p>№ {formatCaseNumber(invoice.record_id.toString())}</p>
 		</div>
 	</div>
 
@@ -148,7 +152,11 @@
 			</div>
 			<div class="info-row">
 				<label>Case No.:</label>
-				<input type="text" value={invoice.case_no} readonly />
+				<input
+					type="text"
+					value={`${invoice.items.map((item) => `${item.case_no}`).join(' & ')}`}
+					readonly
+				/>
 			</div>
 			<div class="info-row">
 				<label>Name of Patient:</label>
