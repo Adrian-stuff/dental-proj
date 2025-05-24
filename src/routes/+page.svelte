@@ -461,7 +461,7 @@
 								record.paymentStatus === 'paid' && record.remarks === 'finished'
 									? 'bg-green-200'
 									: record.paymentStatus === 'unpaid' && record.remarks === 'finished'
-										? 'bg-red-200'
+										? 'bg-red-300'
 										: record.paymentStatus === 'unpaid' && record.remarks === 'pending'
 											? 'bg-white'
 											: 'bg-violet-300'
