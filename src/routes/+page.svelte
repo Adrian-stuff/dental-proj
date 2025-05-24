@@ -458,11 +458,13 @@
 							class={`
 							border-b border-gray-200 transition-colors
 							${
-								record.paymentStatus === 'unpaid'
-									? 'bg-red-200 '
-									: record.paymentStatus === 'paid'
-										? 'bg-green-200'
-										: ''
+								record.paymentStatus === 'paid' && record.remarks === 'finished'
+									? 'bg-green-200'
+									: record.paymentStatus === 'unpaid' && record.remarks === 'finished'
+										? 'bg-red-200'
+										: record.paymentStatus === 'unpaid' && record.remarks === 'pending'
+											? 'bg-white'
+											: 'bg-violet-300'
 							}
 						`}
 						>

@@ -17,7 +17,6 @@ export const load = (async ({ params }) => {
         timePickup: records.timePickup,
         timeDropoff: records.timeDropoff,
         patientName: records.patientName,
-        description: records.description,
         remarks: records.remarks,
         orderTotal: orders.orderTotal,
         paidAmount: orders.paidAmount,
@@ -51,7 +50,7 @@ export const load = (async ({ params }) => {
       items: result.map(item => ({
         quantity: item.orderItems.itemQuantity,
         unit: item.orderItems.upOrDown,
-        description: `${item.caseTypeName} - ${item.description || ''}`,
+        description: `${item.caseTypeName} - ${item.orderItems.orderDescription || ''}`,
         unit_cost: item.orderItems.itemCost,
         amount: Number(item.orderItems.itemCost) * Number(item.orderItems.itemQuantity)
       })),

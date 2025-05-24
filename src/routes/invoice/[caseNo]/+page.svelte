@@ -129,10 +129,11 @@
 			<div class="company-details">
 				<h2>Cassey Dental Laboratory, INC.</h2>
 				<p>Camia St Panghulo Obando</p>
-				<p>Cell no. 0917-537-6768</p>
-				<p>Non-VAT Reg TIN: 001-075-748-00002</p>
+				<p>Cell no. 0916-753-5300</p>
+				<p>Non-VAT Reg TIN: 341-948-594-00000</p>
 			</div>
 		</div>
+		s
 		<div class="invoice-number">
 			<h1>SERVICE INVOICE</h1>
 			<p>№ {formatCaseNumber(invoice.case_no.toString())}</p>
