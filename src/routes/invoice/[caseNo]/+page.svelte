@@ -143,7 +143,7 @@
 	}
 
 	.company-details {
-		font-size: 0.8em;
+		font-size: 1em;
 	}
 
 	.company-details h2 {
