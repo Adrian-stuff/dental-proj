@@ -29,115 +29,12 @@
 		<div class="logo-section">
 			<img src="/logo.jpg" alt="Cassey Dental Laboratory Logo" />
 			<div class="company-details">
-				<h2>Cassey Dental Laboratory, INC.</h2>
-				<p>Camia St Panghulo Obando</p>
-				<p>Cell no. 0917-537-6768</p>
-				<p>Non-VAT Reg TIN: 001-075-748-00002</p>
-			</div>
-		</div>
-		<div class="invoice-number">
-			<h1>SERVICE INVOICE</h1>
-			<p>№ {formatCaseNumber(invoice.record_id.toString())}</p>
-		</div>
-	</div>
-
-	<div class="invoice-info">
-		<div class="left-info">
-			<div class="info-row">
-				<label>Name of Clinic:</label>
-				<input type="text" value={invoice.clinic_name} readonly />
-			</div>
-			<div class="info-row">
-				<label>Case No.:</label>
-				<input
-					type="text"
-					value={`${invoice.items.map((item) => `${item.case_no}`).join(' & ')}`}
-					readonly
-				/>
-			</div>
-			<div class="info-row">
-				<label>Name of Patient:</label>
-				<input type="text" value={invoice.patient_name} readonly />
-			</div>
-			<div class="info-row">
-				<label>Doctor:</label>
-				<input type="text" value={invoice.doctor_name} readonly />
-			</div>
-		</div>
-		<div class="right-info">
-			<div class="info-row">
-				<label>DATE:</label>
-				<input type="text" value={format(currentDate, 'MM/dd/yyyy')} readonly />
-			</div>
-			<div class="info-row">
-				<label>Status:</label>
-				<input
-					type="text"
-					value={invoice.payment_status}
-					class={invoice.payment_status === 'paid' ? 'text-green-600' : 'text-red-600'}
-					readonly
-				/>
-			</div>
-		</div>
-	</div>
-
-	<table class="invoice-items">
-		<thead>
-			<tr>
-				<th>QTY</th>
-				<th>UNIT</th>
-				<th>CASE TYPE / DESCRIPTION</th>
-				<th>UNIT COST/ PRICE</th>
-				<th>AMOUNT</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each invoice.items || [] as item}
-				<tr>
-					<td>{item.quantity}</td>
-					<td>{item.unit}</td>
-					<td>{item.description}</td>
-					<td>₱{item.unit_cost}</td>
-					<td>₱{item.amount}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
-
-	<div class="invoice-footer">
-		<div class="totals-section">
-			<div class="total-row">
-				<label>TOTAL AMOUNT:</label>
-				<span class="total-amount">₱{subtotal}</span>
-			</div>
-		</div>
-	</div>
-</div>
-
-<!-- Horizontal Divider -->
-<div class="divider">
-	<div class="scissor-line">
-		<!-- <span
-			>✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-			- - - -</span
-		> -->
-	</div>
-</div>
-
-<!-- Merchant Copy -->
-<div class="invoice-container">
-	<div class="copy-label">MERCHANT COPY</div>
-	<div class="invoice-header">
-		<div class="logo-section">
-			<img src="\logo.jpg" alt="Cassey Dental Laboratory Logo" />
-			<div class="company-details">
-				<h2>Cassey Dental Laboratory, INC.</h2>
-				<p>Camia St Panghulo Obando</p>
+				<h2 class="font-bold">CASSEY DENTAL LABORATORY</h2>
+				<p>Camia St., Panghulo, 3021 Obando, Bulacan, Philippines</p>
 				<p>Cell no. 0916-753-5300</p>
 				<p>Non-VAT Reg TIN: 341-948-594-00000</p>
 			</div>
 		</div>
-
 		<div class="invoice-number">
 			<h1>SERVICE INVOICE</h1>
 			<p>№ {formatCaseNumber(invoice.record_id.toString())}</p>
@@ -177,7 +74,9 @@
 				<input
 					type="text"
 					value={invoice.payment_status}
-					class={invoice.payment_status === 'paid' ? 'text-green-600' : 'text-red-600'}
+					class={invoice.payment_status === 'paid'
+						? 'font-bold text-green-600 uppercase'
+						: 'font-bold text-red-600 uppercase'}
 					readonly
 				/>
 			</div>
