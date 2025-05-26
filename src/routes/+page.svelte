@@ -163,7 +163,7 @@
 				</div>
 
 				<!-- Other Filters - Reuse the same pattern -->
-				{#each ['Case Type', 'Case Number', 'Patient Name', 'Payment Status', 'Remarks'] as filterName}
+				{#each ['Case Type', 'Record Id', 'Patient Name', 'Payment Status', 'Remarks'] as filterName}
 					<div>
 						<label class="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
 							<input

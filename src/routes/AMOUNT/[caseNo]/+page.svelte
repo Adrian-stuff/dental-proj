@@ -4,20 +4,54 @@
 	let { data, form }: PageProps = $props();
 	const { record } = data;
 
-	let total_amount = $state(parseFloat(record?.orderTotal) || 0);
-	let paid_amount = $state(parseFloat(record?.paidAmount) || 0);
 	let payment_method = $state(record?.paymentMethod || 'cash');
 	let other_payment_method = $state('');
 	let orderItems = $state(record?.items || []);
 
-	function updateOrderItem(index: number, field: string, value: any) {
-		orderItems[index] = { ...orderItems[index], [field]: value };
-		// Recalculate total amount
+	// Initialize case numbers and totals once at startup
+	function initializeOrderItems() {
+		orderItems = orderItems.map((item) => ({
+			...item,
+			caseNo: item.caseNo || getNextCaseNumber(item.caseTypeId)
+		}));
+		calculateTotalAmount();
+	}
+
+	function getNextCaseNumber(caseTypeId: number) {
+		const caseType = data.caseTypes.find((ct) => ct.caseTypeId === caseTypeId);
+		return caseType ? caseType.numberOfCases + 1 : 1;
+	}
+
+	function calculateTotalAmount() {
 		total_amount = orderItems.reduce(
-			(sum, item) => sum + parseFloat(item.itemCost) * item.itemQuantity,
+			(sum, item) => sum + (parseFloat(item.itemCost) || 0) * (item.itemQuantity || 1),
 			0
 		);
 	}
+
+	let total_amount = $state(parseFloat(record?.orderTotal) || 0);
+	let paid_amount = $state(parseFloat(record?.paidAmount) || 0);
+
+	function updateOrderItem(index: number, field: string, value: any) {
+		const item = orderItems[index];
+		const updates: any = { [field]: value };
+
+		// If changing case type, update case number
+		if (field === 'caseTypeId') {
+			updates.caseNo = getNextCaseNumber(value);
+		}
+
+		// Update the item
+		orderItems[index] = { ...item, ...updates };
+
+		// Only recalculate total if cost or quantity changed
+		if (field === 'itemCost' || field === 'itemQuantity') {
+			calculateTotalAmount();
+		}
+	}
+
+	// Initialize once when component mounts
+	initializeOrderItems();
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-gray-100">
@@ -57,8 +91,9 @@
 									type="text"
 									value={item.caseNo}
 									disabled
-									class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50"
+									class="mt-1 block w-full cursor-not-allowed rounded-md border-gray-300 bg-gray-50"
 								/>
+								<input type="hidden" name={`caseNo_${i}`} value={item.caseNo} />
 							</label>
 						</div>
 						<!-- Description -->

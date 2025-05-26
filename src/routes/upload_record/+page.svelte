@@ -237,20 +237,35 @@
 
 	console.log('doctors', data?.doctors);
 	console.log('clinics', data?.clinics);
-	
+
 	let isSubmitting = $state(false);
-	
+
 	function handleSubmit(e: SubmitEvent) {
 		if (isSubmitting) {
 			e.preventDefault();
 			return;
 		}
-		
+
 		isSubmitting = true;
 		setTimeout(() => {
 			isSubmitting = false;
 		}, 2000); // Reset after 2 seconds
 	}
+
+	// Add these variables near the other state declarations at the top
+	let upper_unit: number = $state(1);
+	let upper_cost: number = $state(0);
+	let lower_unit: number = $state(1);
+	let lower_cost: number = $state(0);
+
+	// Add this effect to calculate total automatically
+	$effect(() => {
+		const upperTotal =
+			selected_jaw === 'upper' || selected_jaw === 'U/L' ? upper_unit * upper_cost : 0;
+		const lowerTotal =
+			selected_jaw === 'lower' || selected_jaw === 'U/L' ? lower_unit * lower_cost : 0;
+		total_amount = upperTotal + lowerTotal;
+	});
 </script>
 
 <div class=" flex justify-center px-4 md:px-8">
@@ -508,10 +523,11 @@
 									type="number"
 									id="upper_unit"
 									name="upper_unit"
+									bind:value={upper_unit}
 									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
 									placeholder="Units"
 									min="1"
-									defaultValue="1"
+									defaultvalue="1"
 								/>
 							</label>
 						</div>
@@ -524,6 +540,7 @@
 									type="number"
 									id="upper_cost"
 									name="upper_cost"
+									bind:value={upper_cost}
 									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
 									placeholder="Cost per unit"
 									min="0"
@@ -572,7 +589,7 @@
 								<input type="hidden" name="case_number_lower" value={next_case_lower} />
 							</label>
 						</div>
-<!-- Description -->
+						<!-- Description -->
 						<div>
 							<label for="lower_description" class="block text-sm font-medium text-gray-700">
 								Description
@@ -591,10 +608,11 @@
 									type="number"
 									id="lower_unit"
 									name="lower_unit"
+									bind:value={lower_unit}
 									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
 									placeholder="Units"
 									min="1"
-									defaultValue="1"
+									defaultvalue="1"
 								/>
 							</label>
 						</div>
@@ -607,6 +625,7 @@
 									type="number"
 									id="lower_cost"
 									name="lower_cost"
+									bind:value={lower_cost}
 									class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
 									placeholder="Cost per unit"
 									min="0"
@@ -614,8 +633,6 @@
 								/>
 							</label>
 						</div>
-
-						
 					</div>
 				</div>
 			{/if}
@@ -730,11 +747,12 @@
 							id="total_amount"
 							name="total_amount"
 							bind:value={total_amount}
-							class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+							class="block w-full appearance-none rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
 							placeholder="0.00"
 							min="0"
 							step="0.01"
 							required
+							readonly
 						/>
 					</label>
 				</div>
@@ -779,13 +797,12 @@
 		<!-- Submit Button -->
 		<div class="flex flex-col items-center justify-center pt-4">
 			<button
-				class="rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+				class="rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
 				type="submit"
 				disabled={isSubmitting}
 			>
 				{isSubmitting ? 'Submitting...' : 'Add Record'}
-			</button
-			>
+			</button>
 			{#if form?.success}
 				<p class="mt-2 font-semibold text-green-500">{form.success}</p>
 			{:else if form?.error}
@@ -812,7 +829,7 @@
 				</button>
 			</div>
 			<div class="relative">
-				<video bind:this={videoElement} autoplay playsinline class="rounded-lg max-w-78"></video>
+				<video bind:this={videoElement} autoplay playsinline class="max-w-78 rounded-lg"></video>
 				<canvas bind:this={canvasElement} class="hidden"></canvas>
 			</div>
 			<div class="mt-4 flex justify-end gap-2">

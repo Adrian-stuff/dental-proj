@@ -31,7 +31,7 @@ export const load: PageServerLoad = async ({ params }) => {
     .where(eq(records.recordId, parseInt(params.caseNo)))
     .limit(1);
 
-  // Get case types for dropdown
+  // Get case types for dropdown with their current case numbers
   const caseTypesData = await db.select().from(caseTypes);
 
   return {
@@ -46,7 +46,7 @@ export const actions = {
     const data = await request.formData();
     const recordId = parseInt(params.caseNo);
     const orderItemsData = JSON.parse(data.get("orderItems")?.toString() || '[]');
-    console.log(data.get("orderItems")?.toString());
+
     try {
       await db.transaction(async (tx) => {
         // Update order
@@ -59,11 +59,20 @@ export const actions = {
           } as any)
           .where(eq(orders.orderId, recordId));
 
-        // Update order items
+        // Update order items and case numbers
         for (const item of orderItemsData) {
+          // Update the case type's number of cases
+          await tx.update(caseTypes)
+            .set({
+              numberOfCases: item.caseNo
+            })
+            .where(eq(caseTypes.caseTypeId, item.caseTypeId));
+
+          // Update order item
           await tx.update(orderItems)
             .set({
               caseTypeId: item.caseTypeId,
+              caseNo: item.caseNo,
               itemQuantity: item.itemQuantity,
               itemCost: item.itemCost,
               orderDescription: item.orderDescription
@@ -78,6 +87,5 @@ export const actions = {
       return { success: false, error: 'Failed to process payment' };
     }
     redirect(303, `/`);
-
   }
 };

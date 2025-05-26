@@ -105,7 +105,7 @@ export const actions = {
       console.error('Error inserting record:', error);
       return { success: false, error: 'Failed to insert record' };
     }
-    redirect(303, "/?case_no=" + recordId);
+    redirect(303, "/?record_id=" + recordId);
 
 
   }
