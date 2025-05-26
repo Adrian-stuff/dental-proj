@@ -48,9 +48,10 @@
 	});
 	console.log(data);
 
-	// Get clinic name for header
-	let customerName = $derived(
-		Object.keys(data.filters).length > 0 ? data.records[0].clinicName : null
+	let customerNames = $derived(
+		Object.keys(data.filters).length > 0
+			? [...new Set(data.records.map((record) => record.clinicName))]
+			: []
 	);
 
 	// Add function to handle clinic selection
@@ -333,10 +334,14 @@
 								{getCurrentDateTime().fullDateTime}
 							</span>
 						</div>
-						{#if customerName}
+						{#if customerNames.length > 0}
 							<div class="flex items-baseline">
-								<span class="w-fit pr-2 text-right font-medium text-gray-600">CUSTOMER NAME:</span>
-								<span class="inline-block w-40 border-b border-gray-500">{customerName}</span>
+								<span class="w-fit pr-2 text-right font-medium text-gray-600"
+									>CUSTOMER NAME{customerNames.length > 1 ? 'S' : ''}:</span
+								>
+								<span class="inline-block w-40 border-b border-gray-500">
+									{customerNames.join(', ')}
+								</span>
 							</div>
 						{/if}
 						<div class="flex items-baseline">
