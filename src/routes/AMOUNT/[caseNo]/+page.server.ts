@@ -60,11 +60,11 @@ export const actions = {
           .where(eq(orders.orderId, recordId));
 
         // Update order items and case numbers
-        for (const item of orderItemsData) {
+        for (const [index, item] of orderItemsData.entries()) {
           // Update the case type's number of cases
           await tx.update(caseTypes)
             .set({
-              numberOfCases: item.caseNo
+              numberOfCases: parseInt(data.get(`caseNo_${index}`)?.toString() || '0')
             })
             .where(eq(caseTypes.caseTypeId, item.caseTypeId));
 
