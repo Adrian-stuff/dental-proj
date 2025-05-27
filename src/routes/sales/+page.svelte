@@ -8,40 +8,62 @@
 	console.log(data.recordData);
 	let selectedMonth = $state(currentMonth);
 	let selectedYear = $state(currentYear);
-	let selectedDate = $state<string | null>(null); // Add this for exact date
-	let isExactDate = $state(false); // Add this to toggle between month/year and exact date
 
-	// Add this function to handle date changes
-	function handleDateToggle() {
-		isExactDate = !isExactDate;
-		if (!isExactDate) {
-			selectedDate = null;
-		}
-	}
-
-	interface ClientIncome {
+	interface ClientTransaction {
 		name: string;
-		income: number;
+		transactions: Array<{
+			dateDropoff: string;
+			patientName: string;
+			paidAmount: number;
+			orderTotal: number;
+			paymentMethod: string;
+			paymentStatus: string;
+		}>;
+		totalIncome: number;
 	}
 
-	function calculateClientIncome(records: any[]): ClientIncome[] {
-		const clientIncomes: { [key: string]: number } = {};
+	function calculateClientIncome(records: any[]): ClientTransaction[] {
+		const clientData: { [key: string]: { transactions: any[]; totalIncome: number } } = {};
+
 		records.forEach((record) => {
 			const clinic = record.clinicName;
 			const paid = parseFloat(record.order?.paidAmount || 0);
-			if (clinic && paid) {
-				clientIncomes[clinic] = (clientIncomes[clinic] || 0) + paid;
+			const dropoff = record.record?.dateDropoff;
+
+			// Only process records that have a dropoff date
+			if (clinic && dropoff) {
+				if (!clientData[clinic]) {
+					clientData[clinic] = { transactions: [], totalIncome: 0 };
+				}
+
+				clientData[clinic].transactions.push({
+					dateDropoff: dropoff,
+					patientName: record.record.patientName,
+					paidAmount: paid,
+					orderTotal: parseFloat(record.order?.orderTotal || 0),
+					paymentMethod: record.order?.paymentMethod,
+					paymentStatus: record.order?.paymentStatus
+				});
+
+				clientData[clinic].totalIncome += paid;
 			}
 		});
-		return Object.entries(clientIncomes).map(([name, income]) => ({
+
+		return Object.entries(clientData).map(([name, data]) => ({
 			name,
-			income
+			transactions: data.transactions,
+			totalIncome: data.totalIncome
 		}));
 	}
 
+	// Also update the total income calculation
 	function calculateTotalIncome(records: any[]): number {
 		return records.reduce((total, record) => {
-			return total + parseFloat(record.order?.paidAmount || 0);
+			// Only include in total if there's a dropoff date
+			if (record.record?.dateDropoff) {
+				return total + parseFloat(record.order?.paidAmount || 0);
+			}
+			return total;
 		}, 0);
 	}
 
@@ -51,7 +73,7 @@
 		}, 0);
 	}
 
-	const clients: ClientIncome[] = calculateClientIncome(recordData);
+	const clients: ClientTransaction[] = calculateClientIncome(recordData);
 	const totalIncome: number = calculateTotalIncome(recordData);
 
 	// Calculate total supply from supplies array
@@ -90,8 +112,150 @@
 	// Update total calculations
 	$effect(() => {
 		totalSalaries = staffSalaries.reduce((total, staff) => total + staff.salary, 0);
-		totalExpenses = totalSupply + totalSalaries;
+		const allWeeks = Array.from(weeklyData.values());
+		const weeklyExpenses = allWeeks.reduce((total, week) => total + week.totalExpenses, 0);
+
+		// Calculate total expenses and profit
+		totalExpenses = totalSupply + totalSalaries + weeklyExpenses;
 		totalProfit = totalIncome - totalExpenses;
+	});
+
+	// Add this near the top of your script section
+	interface WeeklySalaryInput {
+		staffName: string;
+		amount: number;
+	}
+
+	let salaryInputs = $state(new Map<string, WeeklySalaryInput>());
+
+	// Add these helper functions after the interface definition
+	function getWeekRange(date: Date): string {
+		const startOfWeek = new Date(date);
+		startOfWeek.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+		const endOfWeek = new Date(startOfWeek);
+		endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+
+		return `${formatDate(startOfWeek.toISOString())} - ${formatDate(endOfWeek.toISOString())}`;
+	}
+
+	interface WeeklyTransactions {
+		weekRange: string;
+		transactions: Array<{
+			clinic: string;
+			dateDropoff: string;
+			patientName: string;
+			paidAmount: number;
+			orderTotal: number;
+			paymentMethod: string;
+			paymentStatus: string;
+		}>;
+		expenses: Array<{
+			date: string;
+			description: string;
+			amount: number;
+			type: 'supply' | 'salary';
+		}>;
+		totalAmount: number;
+		totalExpenses: number;
+		weeklyProfit: number;
+	}
+
+	function groupTransactionsByWeek(
+		records: any[],
+		supplies: any[],
+		salaries: any[]
+	): WeeklyTransactions[] {
+		const weeklyData = new Map<string, WeeklyTransactions>();
+
+		// Helper function to get or create week data
+		const getWeekData = (date: Date) => {
+			const weekRange = getWeekRange(date);
+			if (!weeklyData.has(weekRange)) {
+				weeklyData.set(weekRange, {
+					weekRange,
+					transactions: [],
+					expenses: [],
+					totalAmount: 0,
+					totalExpenses: 0,
+					weeklyProfit: 0
+				});
+			}
+			return weeklyData.get(weekRange)!;
+		};
+
+		// Group transactions by week
+		records.forEach((record) => {
+			if (record.record?.dateDropoff) {
+				const dropoffDate = new Date(record.record.dateDropoff);
+				const weekData = getWeekData(dropoffDate);
+				const paidAmount = parseFloat(record.order?.paidAmount || 0);
+
+				weekData.transactions.push({
+					clinic: record.clinicName,
+					dateDropoff: record.record.dateDropoff,
+					patientName: record.record.patientName,
+					paidAmount,
+					orderTotal: parseFloat(record.order?.orderTotal || 0),
+					paymentMethod: record.order?.paymentMethod,
+					paymentStatus: record.order?.paymentStatus
+				});
+				weekData.totalAmount += paidAmount;
+			}
+		});
+
+		// Group supplies by week
+		supplies.forEach((supply) => {
+			const supplyDate = new Date(supply.supplyDate);
+			const weekData = getWeekData(supplyDate);
+			const amount = parseFloat(supply.supplyCost || 0);
+
+			weekData.expenses.push({
+				date: supply.supplyDate,
+				description: supply.supplyDescription || 'Supply Cost',
+				amount,
+				type: 'supply'
+			});
+			weekData.totalExpenses += amount;
+		});
+
+		// Add staff salaries to each week
+		const weeks = Array.from(weeklyData.keys());
+
+		if (weeks.length > 0) {
+			salaries.forEach((staff) => {
+				const weeklySalary = staff.salary / 4; // Monthly to weekly
+
+				weeks.forEach((weekRange) => {
+					const weekData = weeklyData.get(weekRange)!;
+
+					// Add salary expense for the week
+					const salaryExpense = {
+						date: weekRange.split(' - ')[0],
+						description: `Weekly Salary - ${staff.name}`,
+						amount: weeklySalary,
+						type: 'salary' as const
+					};
+
+					weekData.expenses.push(salaryExpense);
+					weekData.totalExpenses += weeklySalary;
+					weekData.weeklyProfit = weekData.totalAmount - weekData.totalExpenses;
+				});
+			});
+		}
+
+		return Array.from(weeklyData.values()).sort(
+			(a, b) =>
+				new Date(a.weekRange.split(' - ')[0]).getTime() -
+				new Date(b.weekRange.split(' - ')[0]).getTime()
+		);
+	}
+
+	// Change the weeklyData state declaration
+	let weeklyData = $state<WeeklyTransactions[]>([]);
+
+	// Create a derived state for the grouped transactions
+	$effect(() => {
+		weeklyData = groupTransactionsByWeek(recordData, supplies, staffSalaries);
 	});
 </script>
 
@@ -102,26 +266,7 @@
 		<!-- Month Year Picker Form -->
 		<form method="POST" action="?/changeDate" class="flex items-center gap-4 print:hidden">
 			<div class="flex items-center gap-4">
-				<label class="flex items-center gap-2">
-					<input
-						type="checkbox"
-						checked={isExactDate}
-						onchange={handleDateToggle}
-						class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-					/>
-					<span class="text-sm text-gray-700">Exact Date</span>
-				</label>
-
-				{#if isExactDate}
-					<input
-						type="date"
-						name="exact_date"
-						bind:value={selectedDate}
-						class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-					/>
-				{:else}
-					<MonthYearPicker bind:selectedMonth bind:selectedYear />
-				{/if}
+				<MonthYearPicker bind:selectedMonth bind:selectedYear />
 			</div>
 
 			<button
@@ -135,252 +280,324 @@
 
 	<!-- Display selected month and year -->
 	<div class="mb-4 w-full text-sm text-gray-500">
-		Showing data for:
-		{#if isExactDate && selectedDate}
-			{new Date(selectedDate).toLocaleDateString('en-US', {
-				year: 'numeric',
-				month: 'long',
-				day: 'numeric'
-			})}
-		{:else}
-			{new Date(selectedYear, selectedMonth - 1).toLocaleString('default', {
-				month: 'long',
-				year: 'numeric'
-			})}
-		{/if}
+		Showing data for: {new Date(selectedYear, selectedMonth - 1).toLocaleString('default', {
+			month: 'long',
+			year: 'numeric'
+		})}
 	</div>
 
-	<div class="flex flex-row gap-6">
-		<div class="flex-1 rounded-lg bg-white p-6 shadow-md">
-			<h2 class="mb-4 text-xl font-semibold">Income</h2>
-			<div class="overflow-x-auto">
-				<table class="min-w-full border-collapse rounded-lg border border-gray-200">
-					<thead class="bg-gray-50">
-						<tr>
-							<th
-								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-							>
-								Name of Clients (Clinic)
-							</th>
-							<th
-								class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
-							>
-								Income (Paid Amount)
-							</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-gray-200 bg-white">
-						{#each clients as client}
-							<tr>
-								<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">{client.name}</td>
-								<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
-									&#8369;{client.income.toFixed(2)}
-								</td>
-							</tr>
-						{/each}
-						<tr>
-							<td class="px-6 py-4 text-sm font-semibold whitespace-nowrap text-gray-900">
-								Total Income
-							</td>
-							<td
-								class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
-							>
-								&#8369;{totalIncome.toFixed(2)}
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-		</div>
+	<!-- Main Income Section -->
+	<div class="mb-8 w-full rounded-lg bg-white p-6 shadow-md">
+		<h2 class="mb-4 text-xl font-semibold">Income</h2>
+		<div class="overflow-x-auto">
+			{#each weeklyData as week}
+				<div class="mb-8">
+					<h3 class="mb-4 text-lg font-semibold">Week: {week.weekRange}</h3>
 
-		<div class="flex-1 rounded-lg bg-white p-6 shadow-md">
-			<h2 class="mb-4 text-xl font-semibold">Expenses</h2>
-			<div class="flex flex-col gap-4">
-				<div>
-					<h3 class="text-lg font-semibold">Supply</h3>
-					<div class="overflow-x-auto">
-						<table class="min-w-full border-collapse rounded-lg border border-gray-200">
-							<thead class="bg-gray-50">
-								<tr>
-									<th
-										class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>
-										Date
-									</th>
-									<th
-										class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>
-										Description
-									</th>
-									<th
-										class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>
-										Amount
-									</th>
-								</tr>
-							</thead>
-							<tbody class="divide-y divide-gray-200 bg-white">
-								{#each supplies as supply}
-									<tr>
-										<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
-											{formatDate(supply.supplyDate)}
-										</td>
-										<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
-											{supply.supplyDescription || '-'}
-										</td>
-										<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
-											&#8369;{parseFloat(supply.supplyCost).toFixed(2)}
-										</td>
-									</tr>
-								{/each}
-								<tr>
-									<td class="px-6 py-4 text-sm font-semibold whitespace-nowrap text-gray-900">
-										Total Supply
-									</td>
-									<td class="px-6 py-4 text-sm font-semibold whitespace-nowrap text-gray-900"> </td>
-									<td
-										class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
-									>
-										&#8369;{totalSupply.toFixed(2)}
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				</div>
-
-				<div>
-					<h3 class="mb-4 text-lg font-semibold">Add Staff Salary</h3>
-					<div class="mb-4 flex gap-4">
-						<div class="flex-1">
-							<label for="staffName" class="mb-1 block text-sm font-medium text-gray-700">
-								Staff Name
-							</label>
-							<input
-								type="text"
-								id="staffName"
-								bind:value={newStaffName}
-								class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-								placeholder="Enter staff name"
-							/>
-						</div>
-						<div class="flex-1">
-							<label for="staffSalary" class="mb-1 block text-sm font-medium text-gray-700">
-								Salary Amount
-							</label>
-							<input
-								type="number"
-								id="staffSalary"
-								bind:value={newStaffSalary}
-								class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-								placeholder="Enter salary amount"
-								min="0"
-								step="0.01"
-							/>
-						</div>
-						<div class="flex items-end">
-							<button
-								type="button"
-								onclick={addSalary}
-								class="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-							>
-								Add Salary
-							</button>
-						</div>
-					</div>
-				</div>
-
-				<div>
-					<h3 class="text-lg font-semibold">Staff Salary</h3>
-					<div class="overflow-x-auto">
-						<table class="min-w-full border-collapse rounded-lg border border-gray-200">
-							<thead class="bg-gray-50">
-								<tr>
-									<th
-										class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>
-										Staff
-									</th>
-									<th
-										class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>
-										Salary
-									</th>
-									<th
-										class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>
-										Actions
-									</th>
-								</tr>
-							</thead>
-							<tbody class="divide-y divide-gray-200 bg-white">
-								{#if staffSalaries.length === 0}
-									<tr>
-										<td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
-											No staff salaries added
-										</td>
-									</tr>
-								{/if}
-								{#each staffSalaries as staff, index}
-									<tr>
-										<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
-											{staff.name}
-										</td>
-										<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
-											&#8369;{staff.salary.toFixed(2)}
-										</td>
-										<td class="px-6 py-4 text-right">
-											<button
-												type="button"
-												onclick={() => removeSalary(index)}
-												class="text-red-600 hover:text-red-800"
+					<!-- Tables Container -->
+					<div class="mb-4 flex flex-col gap-4 lg:flex-row">
+						<!-- Income Table -->
+						<div class="w-full lg:w-3/5">
+							<h4 class="text-md mb-2 font-semibold">Income</h4>
+							<div class="overflow-x-auto">
+								<table class="min-w-full border-collapse rounded-lg border border-gray-200">
+									<thead class="bg-gray-50">
+										<tr>
+											<th
+												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													class="h-5 w-5"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-												>
-													<path
-														fill-rule="evenodd"
-														d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-														clip-rule="evenodd"
-													/>
-												</svg>
-											</button>
-										</td>
-									</tr>
-								{/each}
-								<tr>
-									<td class="px-6 py-4 text-sm font-semibold whitespace-nowrap text-gray-900">
-										Total Salary
-									</td>
-									<td
-										colspan="2"
-										class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
+												Clinic Name
+											</th>
+											<th
+												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+											>
+												Drop-off Date
+											</th>
+											<th
+												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+											>
+												Patient Name
+											</th>
+											<th
+												class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+											>
+												Order Total
+											</th>
+											<th
+												class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+											>
+												Paid Amount
+											</th>
+											<th
+												class="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase"
+											>
+												Status
+											</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-gray-200 bg-white">
+										{#each week.transactions as transaction}
+											<tr>
+												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+													{transaction.clinic}
+												</td>
+												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+													{formatDate(transaction.dateDropoff)}
+												</td>
+												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+													{transaction.patientName}
+												</td>
+												<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
+													&#8369;{transaction.orderTotal.toFixed(2)}
+												</td>
+												<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
+													&#8369;{transaction.paidAmount.toFixed(2)}
+												</td>
+												<td class="px-6 py-4 text-center text-sm whitespace-nowrap">
+													<span
+														class={`rounded-full px-2 py-1 text-xs font-semibold 
+														${transaction.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+													>
+														{transaction.paymentStatus}
+													</span>
+												</td>
+											</tr>
+										{/each}
+										<tr class="bg-gray-50">
+											<td
+												colspan="4"
+												class="px-6 py-4 text-sm font-semibold whitespace-nowrap text-gray-900"
+											>
+												Weekly Total
+											</td>
+											<td
+												colspan="2"
+												class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
+											>
+												&#8369;{week.totalAmount.toFixed(2)}
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<!-- Expenses Table -->
+						<div class="w-full lg:w-2/5">
+							<h4 class="text-md mb-2 font-semibold">Expenses</h4>
+							<div class="overflow-x-auto">
+								<table class="mb-4 min-w-full border-collapse rounded-lg border border-gray-200">
+									<thead class="bg-gray-50">
+										<tr>
+											<th
+												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+											>
+												Date
+											</th>
+											<th
+												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+											>
+												Description
+											</th>
+											<th
+												class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+											>
+												Amount
+											</th>
+											<th
+												class="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase"
+											>
+												Type
+											</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-gray-200 bg-white">
+										{#each week.expenses as expense}
+											<tr>
+												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+													{formatDate(expense.date)}
+												</td>
+												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+													{expense.description}
+												</td>
+												<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
+													&#8369;{expense.amount.toFixed(2)}
+												</td>
+												<td class="px-6 py-4 text-center text-sm whitespace-nowrap">
+													<span
+														class={`rounded-full px-2 py-1 text-xs font-semibold 
+														${
+															expense.type === 'supply'
+																? 'bg-blue-100 text-blue-800'
+																: expense.type === 'salary'
+																	? 'bg-purple-100 text-purple-800'
+																	: ''
+														}`}
+													>
+														{expense.type}
+													</span>
+												</td>
+											</tr>
+										{/each}
+										<tr class="bg-gray-50">
+											<td
+												colspan="2"
+												class="px-6 py-4 text-sm font-semibold whitespace-nowrap text-gray-900"
+											>
+												Weekly Total Expenses
+											</td>
+											<td
+												colspan="2"
+												class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
+											>
+												&#8369;{week.totalExpenses.toFixed(2)}
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+
+							<!-- Weekly Staff Salary Input -->
+							<div class="mt-4 rounded-lg bg-gray-50 p-4">
+								<h5 class="mb-2 text-sm font-semibold">Add Weekly Staff Salary</h5>
+								<div class="flex gap-4">
+									<div class="flex-1">
+										<input
+											type="text"
+											class="mb-2 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+											placeholder="Enter staff name"
+											value={salaryInputs.get(week.weekRange)?.staffName ?? ''}
+											oninput={(e) => {
+												const current = salaryInputs.get(week.weekRange) ?? {
+													staffName: '',
+													amount: 0
+												};
+												salaryInputs.set(week.weekRange, {
+													...current,
+													staffName: (e.target as HTMLInputElement).value
+												});
+											}}
+										/>
+									</div>
+									<div class="flex-1">
+										<input
+											type="number"
+											class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+											placeholder="Enter weekly salary amount"
+											min="0"
+											step="0.01"
+											value={salaryInputs.get(week.weekRange)?.amount ?? 0}
+											oninput={(e) => {
+												const current = salaryInputs.get(week.weekRange) ?? {
+													staffName: '',
+													amount: 0
+												};
+												salaryInputs.set(week.weekRange, {
+													...current,
+													amount: Number((e.target as HTMLInputElement).value)
+												});
+											}}
+										/>
+									</div>
+									<button
+										class="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+										onclick={(e) => {
+											e.preventDefault();
+											const input = salaryInputs.get(week.weekRange);
+											if (input?.amount > 0 && input?.staffName) {
+												const newExpense = {
+													date: week.weekRange.split(' - ')[0],
+													description: `Weekly Salary - ${input.staffName}`,
+													amount: input.amount,
+													type: 'salary' as const
+												};
+
+												// Find the week and update it
+												const weekIndex = weeklyData.findIndex(
+													(w) => w.weekRange === week.weekRange
+												);
+												if (weekIndex !== -1) {
+													const updatedWeek = {
+														...weeklyData[weekIndex],
+														expenses: [...weeklyData[weekIndex].expenses, newExpense],
+														totalExpenses: weeklyData[weekIndex].totalExpenses + input.amount,
+														weeklyProfit:
+															weeklyData[weekIndex].totalAmount -
+															(weeklyData[weekIndex].totalExpenses + input.amount)
+													};
+
+													// Update the array
+													weeklyData = [
+														...weeklyData.slice(0, weekIndex),
+														updatedWeek,
+														...weeklyData.slice(weekIndex + 1)
+													];
+												}
+
+												// Clear inputs
+												salaryInputs.delete(week.weekRange);
+											}
+										}}
 									>
-										&#8369;{totalSalaries.toFixed(2)}
-									</td>
-								</tr>
-							</tbody>
-						</table>
+										Add
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Weekly Summary -->
+					<div class="mt-4 rounded-lg bg-gray-50 p-4">
+						<div class="grid grid-cols-3 gap-4">
+							<div>
+								<p class="text-sm font-semibold text-gray-600">Weekly Income</p>
+								<p class="text-lg font-bold text-gray-900">
+									&#8369;{week.totalAmount.toFixed(2)}
+								</p>
+							</div>
+							<div>
+								<p class="text-sm font-semibold text-gray-600">Weekly Expenses</p>
+								<p class="text-lg font-bold text-gray-900">
+									&#8369;{week.totalExpenses.toFixed(2)}
+								</p>
+							</div>
+							<div>
+								<p class="text-sm font-semibold text-gray-600">Weekly Profit</p>
+								<p
+									class={`text-lg font-bold ${week.weeklyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}
+								>
+									&#8369;{week.weeklyProfit.toFixed(2)}
+								</p>
+							</div>
+						</div>
 					</div>
 				</div>
+			{/each}
+		</div>
+	</div>
+
+	<!-- Total Profit Section -->
+	<div class="w-full rounded-lg bg-white p-6 shadow-md">
+		<h2 class="mb-4 text-xl font-semibold">Summary</h2>
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+			<div>
+				<p class="text-sm font-semibold text-gray-600">Total Income</p>
+				<p class="text-xl font-bold text-gray-900">
+					&#8369;{totalIncome.toFixed(2)}
+				</p>
 			</div>
-			<div class="mt-4">
-				<p class="text-sm font-semibold">
-					Total Expenses: <span class="font-normal text-gray-900"
-						>&#8369;{totalExpenses.toFixed(2)}</span
-					>
+			<div>
+				<p class="text-sm font-semibold text-gray-600">Total Expenses</p>
+				<p class="text-xl font-bold text-gray-900">
+					&#8369;{totalExpenses.toFixed(2)}
+				</p>
+			</div>
+			<div>
+				<p class="text-sm font-semibold text-gray-600">Total Profit</p>
+				<p class={`text-xl font-bold ${totalProfit > 0 ? 'text-green-500' : 'text-red-400'}`}>
+					&#8369;{totalProfit.toFixed(2)}
 				</p>
 			</div>
 		</div>
-	</div>
-
-	<div class="mt-8 rounded-lg bg-white p-6 shadow-md">
-		<h2 class="mb-2 text-xl font-semibold">Profit</h2>
-		<p class={`text-xl font-bold ${totalProfit > 0 ? 'text-green-500' : 'text-red-400'}`}>
-			Total Profit: &#8369;{totalProfit.toFixed(2)}
-		</p>
 	</div>
 </div>

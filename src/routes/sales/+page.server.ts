@@ -84,7 +84,7 @@ export const load: PageServerLoad = async ({ url }) => {
       .innerJoin(orderItems, eq(orders.orderId, orderItems.orderId))
       .innerJoin(doctors, eq(records.doctorId, doctors.doctorId))
       .innerJoin(clinics, eq(doctors.clinicId, clinics.clinicId))
-      .where(sql`records.created_at BETWEEN ${timestampDate(startDate)} AND ${timestampDate(endDate)}`)
+      .where(sql`records.date_dropoff IS NOT NULL AND records.date_dropoff BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)}`)
       .groupBy(records.recordId, orders.orderId, doctors.doctorId, clinics.clinicId);
 
     const supplies = await db
