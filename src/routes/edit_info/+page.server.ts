@@ -207,5 +207,29 @@ export const actions = {
       return { success: false, error: 'Failed to delete case type' };
     }
   },
+  updateCaseTypeCount: async ({ request }) => {
+    const data = await request.formData();
+    const caseTypeId = data.get('case_type_id')?.toString();
+    const numberOfCases = data.get('number_of_cases')?.toString();
+
+    if (!caseTypeId || !numberOfCases) {
+      return { success: false, error: 'Case type ID and number of cases are required' };
+    }
+
+    try {
+      await db
+        .update(caseTypes)
+        .set({ numberOfCases: parseInt(numberOfCases) })
+        .where(eq(caseTypes.caseTypeId, parseInt(caseTypeId)));
+
+      return {
+        success: true,
+        message: 'Case count updated successfully'
+      };
+    } catch (error) {
+      console.error('Error updating case count:', error);
+      return { success: false, error: 'Failed to update case count' };
+    }
+  },
 
 } satisfies Actions;

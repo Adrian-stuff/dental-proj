@@ -389,8 +389,14 @@
 						>
 							Case Type
 						</th>
+						<th
+							scope="col"
+							class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+						>
+							Number of Cases
+						</th>
 						<th scope="col" class="relative px-6 py-3">
-							<span class="sr-only">Delete</span>
+							<span class="sr-only">Actions</span>
 						</th>
 					</tr>
 				</thead>
@@ -400,8 +406,26 @@
 							<td class="px-6 py-2 text-sm font-medium whitespace-nowrap text-gray-900">
 								{caseType.caseTypeName}
 							</td>
+							<td class="px-6 py-2 text-sm whitespace-nowrap">
+								<form action="?/updateCaseTypeCount" method="post" class="flex items-center gap-2">
+									<input type="hidden" name="case_type_id" value={caseType.caseTypeId} />
+									<input
+										type="number"
+										name="number_of_cases"
+										value={caseType.numberOfCases}
+										min="0"
+										class="w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									/>
+									<button
+										type="submit"
+										class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-2 py-1 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+									>
+										Update
+									</button>
+								</form>
+							</td>
 							<td class="px-6 py-2 text-right text-sm font-medium whitespace-nowrap">
-								<form action="?/deleteCaseType" method="post">
+								<form action="?/deleteCaseType" method="post" class="inline">
 									<input type="hidden" name="case_type_id" value={caseType.caseTypeId} />
 									<button
 										type="submit"
