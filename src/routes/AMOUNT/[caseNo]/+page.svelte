@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-
 	let { data, form }: PageProps = $props();
 	const { record } = data;
 
@@ -19,7 +18,15 @@
 
 	function getNextCaseNumber(caseTypeId: number) {
 		const caseType = data.caseTypes.find((ct) => ct.caseTypeId === caseTypeId);
-		return caseType ? caseType.numberOfCases + 1 : 1;
+		const baseNumber = caseType ? caseType.numberOfCases + 1 : 1;
+
+		// Find the highest case number used in the current order items for this case type
+		const highestExistingNumber = orderItems
+			.filter((item) => item.caseTypeId === caseTypeId)
+			.map((item) => parseInt(item.caseNo))
+			.reduce((max, current) => Math.max(max, current || 0), baseNumber - 1);
+
+		return highestExistingNumber + 1;
 	}
 
 	function calculateTotalAmount() {
@@ -34,9 +41,7 @@
 
 	function updateOrderItem(index: number, field: string, value: any) {
 		const item = orderItems[index];
-		const updates: any = { [field]: value };
-
-		// If changing case type, update case number
+		const updates: any = { [field]: value }; // If changing case type, update case number
 		if (field === 'caseTypeId') {
 			updates.caseNo = getNextCaseNumber(value);
 		}
@@ -94,6 +99,7 @@
 									class="mt-1 block w-full cursor-not-allowed rounded-md border-gray-300 bg-gray-50"
 								/>
 								<input type="hidden" name={`caseNo_${i}`} value={item.caseNo} />
+								<input type="hidden" name="orderId" value={record.orderId} />
 							</label>
 						</div>
 						<!-- Description -->

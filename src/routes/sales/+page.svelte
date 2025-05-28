@@ -81,9 +81,6 @@
 	let staffSalaries = $state([]);
 	let newStaffName = $state('');
 	let newStaffSalary = $state('');
-	let totalSalaries = $state(0);
-	let totalExpenses = $state(0);
-	let totalProfit = $state(0);
 
 	// Format date for display
 	function formatDate(dateString: string): string {
@@ -109,14 +106,30 @@
 		staffSalaries = staffSalaries.filter((_, i) => i !== index);
 	}
 
-	// Update total calculations
-	$effect(() => {
-		totalSalaries = staffSalaries.reduce((total, staff) => total + staff.salary, 0);
-		const allWeeks = Array.from(weeklyData.values());
-		const weeklyExpenses = allWeeks.reduce((total, week) => total + week.totalExpenses, 0);
+	// First, initialize state variables
+	let weeklyData = $state<WeeklyTransactions[]>([]);
+	let totalSalaries = $state(0);
+	let totalExpenses = $state(0);
+	let totalWeeklyExpenses = $state(0);
+	let totalProfit = $state(0);
 
-		// Calculate total expenses and profit
-		totalExpenses = totalSupply + totalSalaries + weeklyExpenses;
+	// Combined effect to handle all calculations in correct order
+	$effect(() => {
+		// Store intermediate values to avoid circular dependencies
+		const calculatedTotalSalaries = staffSalaries.reduce((total, staff) => total + staff.salary, 0);
+		const calculatedWeeklyData = groupTransactionsByWeek(recordData, supplies, staffSalaries);
+		const calculatedWeeklyExpenses = calculatedWeeklyData.reduce(
+			(total, week) => total + week.totalExpenses,
+			0
+		);
+
+		// Update all state once, in the correct order
+		weeklyData = calculatedWeeklyData;
+		totalSalaries = calculatedTotalSalaries;
+		totalWeeklyExpenses = calculatedWeeklyExpenses;
+
+		// Finally calculate the derived totals
+		totalExpenses = totalSupply + calculatedTotalSalaries + calculatedWeeklyExpenses;
 		totalProfit = totalIncome - totalExpenses;
 	});
 
@@ -180,7 +193,10 @@
 					weeklyProfit: 0
 				});
 			}
-			return weeklyData.get(weekRange)!;
+			const weekData = weeklyData.get(weekRange)!;
+			// Calculate profit whenever expenses or income changes
+			weekData.weeklyProfit = weekData.totalAmount - weekData.totalExpenses;
+			return weekData;
 		};
 
 		// Group transactions by week
@@ -200,6 +216,10 @@
 					paymentStatus: record.order?.paymentStatus
 				});
 				weekData.totalAmount += paidAmount;
+				// Sort transactions by date after adding new one
+				weekData.transactions.sort((a, b) => sortByDate(a.dateDropoff, b.dateDropoff));
+				// Update profit after adding income
+				weekData.weeklyProfit = weekData.totalAmount - weekData.totalExpenses;
 			}
 		});
 
@@ -216,6 +236,10 @@
 				type: 'supply'
 			});
 			weekData.totalExpenses += amount;
+			// Sort expenses by date after adding new one
+			weekData.expenses.sort((a, b) => sortByDate(a.date, b.date));
+			// Update profit after adding expense
+			weekData.weeklyProfit = weekData.totalAmount - weekData.totalExpenses;
 		});
 
 		// Add staff salaries to each week
@@ -238,25 +262,31 @@
 
 					weekData.expenses.push(salaryExpense);
 					weekData.totalExpenses += weeklySalary;
+					// Update profit after adding salary expense
 					weekData.weeklyProfit = weekData.totalAmount - weekData.totalExpenses;
 				});
 			});
 		}
 
-		return Array.from(weeklyData.values()).sort(
-			(a, b) =>
-				new Date(a.weekRange.split(' - ')[0]).getTime() -
-				new Date(b.weekRange.split(' - ')[0]).getTime()
+		// Sort all data by date
+		const sortedData = Array.from(weeklyData.values());
+
+		// First sort all internal arrays by date
+		sortedData.forEach((week) => {
+			week.transactions.sort((a, b) => sortByDate(a.dateDropoff, b.dateDropoff));
+			week.expenses.sort((a, b) => sortByDate(a.date, b.date));
+		});
+
+		// Then sort weeks themselves
+		return sortedData.sort((a, b) =>
+			sortByDate(a.weekRange.split(' - ')[0], b.weekRange.split(' - ')[0])
 		);
 	}
 
-	// Change the weeklyData state declaration
-	let weeklyData = $state<WeeklyTransactions[]>([]);
-
-	// Create a derived state for the grouped transactions
-	$effect(() => {
-		weeklyData = groupTransactionsByWeek(recordData, supplies, staffSalaries);
-	});
+	// Helper function for sorting
+	function sortByDate(a: string, b: string): number {
+		return new Date(a).getTime() - new Date(b).getTime();
+	}
 </script>
 
 <div class="container mx-auto flex flex-col items-center justify-center p-4">

@@ -44,20 +44,21 @@ export const load: PageServerLoad = async ({ params }) => {
 export const actions = {
   default: async ({ request, params }) => {
     const data = await request.formData();
-    const recordId = parseInt(params.caseNo);
+    const orderId = parseInt(data.get("orderId").toString());
     const orderItemsData = JSON.parse(data.get("orderItems")?.toString() || '[]');
-
+    console.log(data)
+    console.log(orderId)
     try {
       await db.transaction(async (tx) => {
         // Update order
         await tx.update(orders)
           .set({
-            orderTotal: parseFloat(data.get("total_amount")?.toString() || "0"),
-            paidAmount: parseFloat(data.get("paid_amount")?.toString() || "0"),
-            excessPayment: parseFloat(data.get("excess_payment")?.toString() || "0"),
+            orderTotal: data.get("total_amount")?.toString(),
+            paidAmount: data.get("paid_amount")?.toString(),
+            excessPayment: data.get("excess_payment")?.toString(),
             paymentMethod: data.get("final_payment_method")?.toString()
           } as any)
-          .where(eq(orders.orderId, recordId));
+          .where(eq(orders.orderId, orderId));
 
         // Update order items and case numbers
         for (const [index, item] of orderItemsData.entries()) {

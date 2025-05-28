@@ -10,7 +10,6 @@
 	const formatCaseNumber = (num: string) => {
 		return num.padStart(5, '0');
 	};
-
 	const currentDate = new Date(invoice.date);
 
 	let subtotal = +invoice.total_amount || 0;

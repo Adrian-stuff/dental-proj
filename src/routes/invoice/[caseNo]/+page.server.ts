@@ -39,7 +39,7 @@ export const load = (async ({ params }) => {
     }
 
     const invoice = {
-      date: result[0].datePickup,
+      date: result[0].dateDropoff,
       clinic_name: result[0].clinicName,
       patient_name: result[0].patientName,
       doctor_name: result[0].doctorName,
