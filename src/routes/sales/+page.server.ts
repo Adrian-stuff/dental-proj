@@ -46,7 +46,7 @@ export const load: PageServerLoad = async ({ url }) => {
       .innerJoin(orderItems, eq(orders.orderId, orderItems.orderId))
       .innerJoin(doctors, eq(records.doctorId, doctors.doctorId))
       .innerJoin(clinics, eq(doctors.clinicId, clinics.clinicId))
-      .where(sql`DATE(records.created_at) = ${exactDate}`)
+      .where(sql`DATE(records.date_dropoff) = ${exactDate}`)
       .groupBy(records.recordId, orders.orderId, doctors.doctorId, clinics.clinicId);
 
     const supplies = await db
