@@ -71,9 +71,7 @@ export const actions = {
         // Update order items and case numbers
         for (const [index, item] of orderItemsData.entries()) {
           // Find the current item to compare case type
-          const currentItem = currentItems.find(ci => ci.orderItemId === item.orderItemId);
-
-          // Only update case type's number of cases if the case type was changed
+          const currentItem = currentItems.find(ci => ci.orderItemId === item.orderItemId);          // Only update case type's number of cases if the case type was changed
           if (currentItem && currentItem.caseTypeId !== item.caseTypeId) {
             await tx.update(caseTypes)
               .set({
@@ -81,18 +79,18 @@ export const actions = {
               })
               .where(eq(caseTypes.caseTypeId, item.caseTypeId));
             console.log(`Updated case type ${item.caseTypeId} with new case number: ${data.get(`caseNo_${index}`)}`);
-
-            // Update order item
-            await tx.update(orderItems)
-              .set({
-                caseTypeId: item.caseTypeId,
-                caseNo: parseInt(data.get(`caseNo_${index}`)?.toString() || '0'),
-                itemQuantity: item.itemQuantity,
-                itemCost: item.itemCost,
-                orderDescription: item.orderDescription
-              } as any)
-              .where(eq(orderItems.orderItemId, item.orderItemId));
           }
+
+          // Always update order item regardless of case type changes
+          await tx.update(orderItems)
+            .set({
+              caseTypeId: item.caseTypeId,
+              caseNo: parseInt(data.get(`caseNo_${index}`)?.toString() || '0'),
+              itemQuantity: item.itemQuantity,
+              itemCost: item.itemCost,
+              orderDescription: item.orderDescription
+            } as any)
+            .where(eq(orderItems.orderItemId, item.orderItemId));
 
         }
       });
