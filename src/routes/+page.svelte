@@ -334,11 +334,9 @@
 								{getCurrentDateTime().fullDateTime}
 							</span>
 						</div>
-						{#if customerNames.length > 0}
+						{#if customerNames.length == 1}
 							<div class="flex items-baseline">
-								<span class="w-fit pr-2 text-right font-medium text-gray-600"
-									>CUSTOMER NAME{customerNames.length > 1 ? 'S' : ''}:</span
-								>
+								<span class="w-fit pr-2 text-right font-medium text-gray-600">CUSTOMER NAME:</span>
 								<span class="inline-block w-40 border-b border-gray-500">
 									{customerNames.join(', ')}
 								</span>
@@ -385,7 +383,7 @@
 						>
 							Date Dropoff
 						</th>
-						{#if Object.keys(data.filters).length <= 0}
+						{#if customerNames.length > 1}
 							<th
 								scope="col"
 								class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
@@ -479,7 +477,7 @@
 							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
 								{record.dateDropoff ? record.dateDropoff : '-'}
 							</td>
-							{#if Object.keys(data.filters).length <= 0}
+							{#if customerNames.length > 1}
 								<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
 									{record.clinicName}
 								</td>
