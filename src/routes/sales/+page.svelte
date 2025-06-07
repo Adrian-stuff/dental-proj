@@ -106,33 +106,87 @@
 		staffSalaries = staffSalaries.filter((_, i) => i !== index);
 	}
 
-	// First, initialize state variables
-	let weeklyData = $state<WeeklyTransactions[]>([]);
-	let totalSalaries = $state(0);
-	let totalExpenses = $state(0);
-	let totalWeeklyExpenses = $state(0);
-	let totalProfit = $state(0);
-
-	// Combined effect to handle all calculations in correct order
-	$effect(() => {
-		// Store intermediate values to avoid circular dependencies
-		const calculatedTotalSalaries = staffSalaries.reduce((total, staff) => total + staff.salary, 0);
-		const calculatedWeeklyData = groupTransactionsByWeek(recordData, supplies, staffSalaries);
-		const calculatedWeeklyExpenses = calculatedWeeklyData.reduce(
-			(total, week) => total + week.totalExpenses,
-			0
-		);
-
-		// Update all state once, in the correct order
-		weeklyData = calculatedWeeklyData;
-		totalSalaries = calculatedTotalSalaries;
-		totalWeeklyExpenses = calculatedWeeklyExpenses;
-
-		// Finally calculate the derived totals
-		totalExpenses = totalSupply + calculatedTotalSalaries + calculatedWeeklyExpenses;
-		totalProfit = totalIncome - totalExpenses;
+	// Centralized financial data state
+	let financialData = $state({
+		weekly: [] as WeeklyTransactions[],
+		totalIncome: 0,
+		totalSupply: 0,
+		totalSalaries: 0,
+		totalExpenses: 0,
+		totalWeeklyExpenses: 0,
+		totalProfit: 0
 	});
 
+	function recalculateFinancialData() {
+		// Calculate weekly data
+		const weekly = groupTransactionsByWeek(recordData, supplies, staffSalaries);
+		// Calculate totals
+		const totalIncome = calculateTotalIncome(recordData);
+		const totalSupply = calculateTotalSupply(supplies);
+		const totalSalaries = staffSalaries.reduce((total, staff) => total + staff.salary, 0);
+		const totalWeeklyExpenses = weekly.reduce((total, week) => total + week.totalExpenses, 0);
+		// FIX: totalExpenses should only be totalWeeklyExpenses (no double counting)
+		const totalExpenses = totalWeeklyExpenses;
+		const totalProfit = totalIncome - totalExpenses;
+		financialData = {
+			weekly,
+			totalIncome,
+			totalSupply,
+			totalSalaries,
+			totalExpenses,
+			totalWeeklyExpenses,
+			totalProfit
+		};
+	}
+
+	// Recalculate whenever dependencies change
+	$effect(() => {
+		recalculateFinancialData();
+	});
+
+	// Add weekly salary from input
+	function addWeeklySalary(weekRange: string, staffName: string, amount: number) {
+		if (amount > 0 && staffName) {
+			// Find the week and update it
+			const weekIndex = financialData.weekly.findIndex((w) => w.weekRange === weekRange);
+			if (weekIndex !== -1) {
+				const newExpense = {
+					date: weekRange.split(' - ')[0],
+					description: `Weekly Salary - ${staffName}`,
+					amount,
+					type: 'salary' as const
+				};
+				const updatedWeek = {
+					...financialData.weekly[weekIndex],
+					expenses: [...financialData.weekly[weekIndex].expenses, newExpense],
+					totalExpenses: financialData.weekly[weekIndex].totalExpenses + amount,
+					weeklyProfit:
+						financialData.weekly[weekIndex].totalAmount -
+						(financialData.weekly[weekIndex].totalExpenses + amount)
+				};
+				// Update the array
+				const updatedWeekly = [
+					...financialData.weekly.slice(0, weekIndex),
+					updatedWeek,
+					...financialData.weekly.slice(weekIndex + 1)
+				];
+				// Recalculate totals based only on updated weekly data
+				const totalWeeklyExpenses = updatedWeekly.reduce(
+					(total, week) => total + week.totalExpenses,
+					0
+				);
+				const totalExpenses = totalWeeklyExpenses;
+				const totalProfit = financialData.totalIncome - totalExpenses;
+				financialData = {
+					...financialData,
+					weekly: updatedWeekly,
+					totalWeeklyExpenses,
+					totalExpenses,
+					totalProfit
+				};
+			}
+		}
+	}
 	// Add this near the top of your script section
 	interface WeeklySalaryInput {
 		staffName: string;
@@ -287,6 +341,35 @@
 	function sortByDate(a: string, b: string): number {
 		return new Date(a).getTime() - new Date(b).getTime();
 	}
+
+	function deleteWeeklySalaryExpense(weekRange: string, expenseIndex: number) {
+		const weekIndex = financialData.weekly.findIndex((w) => w.weekRange === weekRange);
+		if (weekIndex !== -1) {
+			const week = financialData.weekly[weekIndex];
+			const expenseToDelete = week.expenses[expenseIndex];
+			if (expenseToDelete && expenseToDelete.type === 'salary') {
+				const updatedExpenses = week.expenses.filter((_, i) => i !== expenseIndex);
+				const updatedTotalExpenses = week.totalExpenses - expenseToDelete.amount;
+				const updatedWeek = {
+					...week,
+					expenses: updatedExpenses,
+					totalExpenses: updatedTotalExpenses,
+					weeklyProfit: week.totalAmount - updatedTotalExpenses
+				};
+				const updatedWeekly = [
+					...financialData.weekly.slice(0, weekIndex),
+					updatedWeek,
+					...financialData.weekly.slice(weekIndex + 1)
+				];
+				financialData = {
+					...financialData,
+					weekly: updatedWeekly
+				};
+				// Ensure all totals and summaries are recalculated
+				recalculateFinancialData();
+			}
+		}
+	}
 </script>
 
 <div class="container mx-auto flex flex-col items-center justify-center p-4">
@@ -320,7 +403,7 @@
 	<div class="mb-8 w-full rounded-lg bg-white p-6 shadow-md">
 		<h2 class="mb-4 text-xl font-semibold">Income</h2>
 		<div class="overflow-x-auto">
-			{#each weeklyData as week}
+			{#each financialData.weekly as week}
 				<div class="mb-8">
 					<h3 class="mb-4 text-lg font-semibold">Week: {week.weekRange}</h3>
 
@@ -442,7 +525,7 @@
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-gray-200 bg-white">
-										{#each week.expenses as expense}
+										{#each week.expenses as expense, expenseIndex}
 											<tr>
 												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
 													{formatDate(expense.date)}
@@ -466,6 +549,16 @@
 													>
 														{expense.type}
 													</span>
+													{#if expense.type === 'salary'}
+														<button
+															type="button"
+															class="ml-2 rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-700"
+															onclick={() =>
+																deleteWeeklySalaryExpense(week.weekRange, expenseIndex)}
+														>
+															Delete
+														</button>
+													{/if}
 												</td>
 											</tr>
 										{/each}
@@ -535,36 +628,7 @@
 											e.preventDefault();
 											const input = salaryInputs.get(week.weekRange);
 											if (input?.amount > 0 && input?.staffName) {
-												const newExpense = {
-													date: week.weekRange.split(' - ')[0],
-													description: `Weekly Salary - ${input.staffName}`,
-													amount: input.amount,
-													type: 'salary' as const
-												};
-
-												// Find the week and update it
-												const weekIndex = weeklyData.findIndex(
-													(w) => w.weekRange === week.weekRange
-												);
-												if (weekIndex !== -1) {
-													const updatedWeek = {
-														...weeklyData[weekIndex],
-														expenses: [...weeklyData[weekIndex].expenses, newExpense],
-														totalExpenses: weeklyData[weekIndex].totalExpenses + input.amount,
-														weeklyProfit:
-															weeklyData[weekIndex].totalAmount -
-															(weeklyData[weekIndex].totalExpenses + input.amount)
-													};
-
-													// Update the array
-													weeklyData = [
-														...weeklyData.slice(0, weekIndex),
-														updatedWeek,
-														...weeklyData.slice(weekIndex + 1)
-													];
-												}
-
-												// Clear inputs
+												addWeeklySalary(week.weekRange, input.staffName, input.amount);
 												salaryInputs.delete(week.weekRange);
 											}
 										}}
@@ -578,7 +642,7 @@
 
 					<!-- Weekly Summary -->
 					<div class="mt-4 rounded-lg bg-gray-50 p-4">
-						<div class="grid grid-cols-3 gap-4">
+						<div class="grid grid-cols-4 gap-4">
 							<div>
 								<p class="text-sm font-semibold text-gray-600">Weekly Income</p>
 								<p class="text-lg font-bold text-gray-900">
@@ -589,6 +653,14 @@
 								<p class="text-sm font-semibold text-gray-600">Weekly Expenses</p>
 								<p class="text-lg font-bold text-gray-900">
 									&#8369;{week.totalExpenses.toFixed(2)}
+								</p>
+							</div>
+							<div>
+								<p class="text-sm font-semibold text-gray-600">Total Unpaid</p>
+								<p class="text-lg font-bold text-red-600">
+									&#8369;{week.transactions
+										.reduce((total, t) => total + (t.orderTotal - t.paidAmount), 0)
+										.toFixed(2)}
 								</p>
 							</div>
 							<div>
@@ -609,23 +681,41 @@
 	<!-- Total Profit Section -->
 	<div class="w-full rounded-lg bg-white p-6 shadow-md">
 		<h2 class="mb-4 text-xl font-semibold">Summary</h2>
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-4">
 			<div>
 				<p class="text-sm font-semibold text-gray-600">Total Income</p>
 				<p class="text-xl font-bold text-gray-900">
-					&#8369;{totalIncome.toFixed(2)}
+					&#8369;{financialData.totalIncome.toFixed(2)}
 				</p>
 			</div>
 			<div>
 				<p class="text-sm font-semibold text-gray-600">Total Expenses</p>
 				<p class="text-xl font-bold text-gray-900">
-					&#8369;{totalExpenses.toFixed(2)}
+					&#8369;{financialData.totalExpenses.toFixed(2)}
+				</p>
+			</div>
+			<div>
+				<p class="text-sm font-semibold text-gray-600">Total Unpaid</p>
+				<p class="text-xl font-bold text-red-600">
+					&#8369;{financialData.weekly
+						.reduce(
+							(total, week) =>
+								total +
+								week.transactions.reduce(
+									(weekTotal, t) => weekTotal + (t.orderTotal - t.paidAmount),
+									0
+								),
+							0
+						)
+						.toFixed(2)}
 				</p>
 			</div>
 			<div>
 				<p class="text-sm font-semibold text-gray-600">Total Profit</p>
-				<p class={`text-xl font-bold ${totalProfit > 0 ? 'text-green-500' : 'text-red-400'}`}>
-					&#8369;{totalProfit.toFixed(2)}
+				<p
+					class={`text-xl font-bold ${financialData.totalProfit > 0 ? 'text-green-500' : 'text-red-400'}`}
+				>
+					&#8369;{financialData.totalProfit.toFixed(2)}
 				</p>
 			</div>
 		</div>
