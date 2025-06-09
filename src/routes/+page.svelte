@@ -383,7 +383,7 @@
 						>
 							Date Dropoff
 						</th>
-						{#if customerNames.length > 1}
+						{#if Object.keys(data.filters).length === 0 || customerNames.length > 1}
 							<th
 								scope="col"
 								class="bg-gray-100 px-3 py-2 text-left text-xs font-semibold text-gray-800"
@@ -477,7 +477,7 @@
 							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
 								{record.dateDropoff ? record.dateDropoff : '-'}
 							</td>
-							{#if customerNames.length > 1}
+							{#if Object.keys(data.filters).length === 0 || customerNames.length > 1}
 								<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
 									{record.clinicName}
 								</td>
