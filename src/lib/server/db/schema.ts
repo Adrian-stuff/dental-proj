@@ -3,6 +3,11 @@ import { sql } from "drizzle-orm"
 
 
 
+export const appSettings = pgTable("app_settings", {
+	key: varchar("key", { length: 255 }).primaryKey().notNull(),
+	value: text("value").notNull()
+});
+
 export const orderItems = pgTable("order_items", {
 	orderItemId: serial("order_item_id").primaryKey().notNull(),
 	orderId: integer("order_id"),
@@ -85,8 +90,8 @@ export const records = pgTable("records", {
 	timeDropoff: time("time_dropoff", { withTimezone: true }),
 	doctorId: integer("doctor_id").notNull(),
 	patientName: varchar("patient_name", { length: 255 }).notNull(),
-	description: text(),
-	remarks: text(),
+	description: text("description"),
+	remarks: text("remarks"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
 	index("idx_records_date_pickup").using("btree", table.datePickup.asc().nullsLast().op("date_ops")),

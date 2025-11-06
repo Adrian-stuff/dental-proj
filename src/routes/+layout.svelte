@@ -17,6 +17,8 @@
 				return 'Expenses';
 			case '/edit_info':
 				return 'Edit Info';
+			case '/change_password':
+				return 'Change Password';
 			case '/upload_record':
 				return 'Add Record';
 			case '/data':
@@ -56,6 +58,7 @@
 		<!-- Hamburger menu button for mobile -->
 		<button
 			class="block rounded border border-[#A1AEB3] bg-[#1F3A4D] p-2 text-white shadow-sm hover:bg-[#233B48] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none md:hidden"
+			aria-label="Toggle menu"
 			onclick={() => (isMenuOpen = !isMenuOpen)}
 		>
 			<svg
@@ -78,6 +81,10 @@
 		<div class="top-7 right-5 hidden justify-between gap-2 md:flex">
 			<a
 				class="rounded border border-[#A1AEB3] bg-[#4B5563] p-2 text-white shadow-sm hover:bg-[#374151] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
+				href="/balance">BALANCES</a
+			>
+			<a
+				class="rounded border border-[#A1AEB3] bg-[#4B5563] p-2 text-white shadow-sm hover:bg-[#374151] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
 				href="/data">DATA</a
 			>
 			<a
@@ -91,6 +98,10 @@
 			<a
 				class="rounded border border-[#A1AEB3] bg-[#2563EB] p-2 text-white shadow-sm hover:bg-[#1D4ED8] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
 				href="/edit_info">EDIT INFOS</a
+			>
+			<a
+				class="rounded border border-[#A1AEB3] bg-[#4B5563] p-2 text-white shadow-sm hover:bg-[#374151] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
+				href="/change_password">CHANGE PASSWORD</a
 			>
 			<button
 				onclick={() => window.print()}
@@ -117,12 +128,20 @@
 			href="/sales">SALES</a
 		>
 		<a
+			class="mb-2 block rounded border border-[#A1AEB3] bg-[#4B5563] p-2 text-white shadow-sm hover:bg-[#374151] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
+			href="/balance">BALANCES</a
+		>
+		<a
 			class="mb-2 block rounded border border-[#A1AEB3] bg-[#DC2626] p-2 text-white shadow-sm hover:bg-[#B91C1C] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
 			href="/expenses">EXPENSES</a
 		>
 		<a
 			class="mb-2 block rounded border border-[#A1AEB3] bg-[#2563EB] p-2 text-white shadow-sm hover:bg-[#1D4ED8] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
 			href="/edit_info">EDIT INFOS</a
+		>
+		<a
+			class="mb-2 block rounded border border-[#A1AEB3] bg-[#4B5563] p-2 text-white shadow-sm hover:bg-[#374151] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
+			href="/change_password">CHANGE PASSWORD</a
 		>
 		<button
 			onclick={() => window.print()}

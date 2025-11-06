@@ -10,7 +10,18 @@ export const load: PageServerLoad = async ({ params }) => {
   let data = [];
   let recordData = [];
   try {
-    recordData = await db.select().from(records).where(sql`record_id = ${caseNo}`).orderBy(desc(records.recordId)).limit(1)
+    recordData = await db
+      .select({
+        recordId: records.recordId,
+        clinicName: clinics.clinicName,
+        doctorId: records.doctorId
+      })
+      .from(records)
+      .leftJoin(doctors, sql`${records.doctorId} = ${doctors.doctorId}`)
+      .leftJoin(clinics, sql`${doctors.clinicId} = ${clinics.clinicId}`)
+      .where(sql`record_id = ${caseNo}`)
+      .orderBy(desc(records.recordId))
+      .limit(1);
 
     data = await db.select().from(history).where(sql`record_id = ${caseNo}`).orderBy(desc(history.historyId))
     console.log(recordData)

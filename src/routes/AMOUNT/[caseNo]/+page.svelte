@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { PageProps } from './$types';
 	let { data, form }: PageProps = $props();
 	const { record } = data;
@@ -57,10 +58,43 @@
 
 	// Initialize once when component mounts
 	initializeOrderItems();
+
+	// Banner state (show success / error returned from form actions)
+	let showBanner = !!form?.success || !!form?.error;
+	let bannerMessage = form?.success ?? form?.error ?? '';
+	let bannerType: 'success' | 'error' | null = form?.success
+		? 'success'
+		: form?.error
+			? 'error'
+			: null;
+
+	onMount(() => {
+		if (showBanner) {
+			const t = setTimeout(() => (showBanner = false), 4500);
+			return () => clearTimeout(t);
+		}
+	});
+
+	function closeBanner() {
+		showBanner = false;
+	}
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-gray-100">
 	<form method="POST" class="mb-4 w-full max-w-4xl rounded bg-white px-8 pt-6 pb-8 shadow-md">
+		{#if showBanner}
+			<div
+				class={bannerType === 'success'
+					? 'mb-4 rounded-md bg-green-50 p-4 text-green-800'
+					: 'mb-4 rounded-md bg-red-50 p-4 text-red-800'}
+			>
+				<div class="flex items-start justify-between">
+					<div class="mr-4 text-sm font-medium">
+						{bannerMessage !== 'true' ? 'Success' : 'Error'}
+					</div>
+				</div>
+			</div>
+		{/if}
 		<!-- Order Items Section -->
 		<div class="mb-6">
 			<h3 class="mb-4 text-lg font-semibold text-gray-900">Order Items</h3>
@@ -247,12 +281,6 @@
 			>
 				Submit Payment
 			</button>
-			{#if form?.success}
-				<p class="text-xs text-green-500 italic">{form.success}</p>
-			{/if}
-			{#if form?.error}
-				<p class="text-xs text-red-500 italic">{form.error}</p>
-			{/if}
 		</div>
 	</form>
 </div>

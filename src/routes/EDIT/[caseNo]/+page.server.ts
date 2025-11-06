@@ -59,13 +59,18 @@ export const actions = {
     const doctorId = parseInt(formData.get('doctorId')?.toString() || '0');
     console.log(formData)
     try {
+      // Parse the recordId to ensure it's a number
+      const recordIdNum = parseInt(recordId?.toString() || '0');
+      if (!recordIdNum) throw new Error('Invalid record ID');
+
       await db
         .update(records)
         .set({
           doctorId,
           patientName: formData.get('patientName')?.toString(),
+          remarks: formData.get('remarks')?.toString(),
         })
-        .where(sql`record_id = ${recordId}`);
+        .where(eq(records.recordId, recordIdNum));
 
       return {
         success: true,

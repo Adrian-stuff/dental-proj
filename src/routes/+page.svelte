@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import { formatDate, generateRecordsSummary, getCurrentDateTime, getRecordDateRange } from '$lib';
+	import { enhance } from '$app/forms';
 
 	const { data }: PageProps = $props();
 	// Filter states
@@ -84,6 +85,40 @@
 		currentPage = page;
 	}
 
+	// Build a compact pagination list with ellipses.
+	// Returns an array of numbers and '...' strings. Examples:
+	// totalPages=10, current=1  -> [1,2,3,4,5,'...',10]
+	// totalPages=10, current=5  -> [1,'...',4,5,6,'...',10]
+	function getPageList(totalPages: number, current: number) {
+		const pages: Array<number | string> = [];
+		if (totalPages <= 7) {
+			for (let i = 1; i <= totalPages; i++) pages.push(i);
+			return pages;
+		}
+
+		if (current <= 4) {
+			pages.push(1, 2, 3, 4, 5, '...', totalPages);
+			return pages;
+		}
+
+		if (current >= totalPages - 3) {
+			pages.push(
+				1,
+				'...',
+				totalPages - 4,
+				totalPages - 3,
+				totalPages - 2,
+				totalPages - 1,
+				totalPages
+			);
+			return pages;
+		}
+
+		// middle range
+		pages.push(1, '...', current - 1, current, current + 1, '...', totalPages);
+		return pages;
+	}
+
 	// Delete state
 	let showDelete = $state(false);
 
@@ -93,6 +128,25 @@
 			// TODO: Implement delete functionality
 			console.log('Delete record:', recordId);
 		}
+	}
+
+	// Password-confirmation modal for deletions
+	let showPasswordModal = $state(false);
+	let modalDeleteRecordId = $state<number | null>(null);
+	let deletePassword = $state('');
+	let deleteForm: HTMLFormElement | null = $state(null);
+
+	function openDeleteModal(id: number) {
+		modalDeleteRecordId = id;
+		deletePassword = '';
+		showPasswordModal = true;
+	}
+
+	function closeDeleteModal() {
+		showPasswordModal = false;
+		modalDeleteRecordId = null;
+		deletePassword = '';
+		if (deleteForm) deleteForm.reset();
 	}
 
 	// Computed totals
@@ -109,7 +163,8 @@
 	});
 
 	let totalBalance = $derived(() => {
-		const total = Number(totalOrderAmount()) - Number(totalPaidAmount());
+		// Balance = paid - order. Positive means clinic/customer has credit (overpaid).
+		const total = Number(totalPaidAmount()) - Number(totalOrderAmount());
 		return total.toFixed(2);
 	});
 </script>
@@ -506,7 +561,11 @@
 								₱{record.paidAmount}
 							</td>
 							<td class="px-3 py-2 text-xs whitespace-nowrap text-black">
-								-₱{(Number(record.orderTotal) - Number(record.paidAmount)).toFixed(2)}
+								{#if Number(record.paidAmount) - Number(record.orderTotal) < 0}
+									-₱{Math.abs(Number(record.paidAmount) - Number(record.orderTotal)).toFixed(2)}
+								{:else}
+									+₱{(Number(record.paidAmount) - Number(record.orderTotal)).toFixed(2)}
+								{/if}
 							</td>
 							<td class="px-3 py-2 text-xs whitespace-nowrap">
 								<span class="flex flex-col gap-0.5">
@@ -569,15 +628,13 @@
 							</td>
 							{#if showDelete}
 								<td class="px-3 py-2 text-sm font-medium whitespace-nowrap print:hidden">
-									<form action="?/deleteRecord" method="POST">
-										<input type="hidden" name="record_id" value={record.recordId} />
-										<button
-											type="submit"
-											class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-red-700/10 hover:bg-red-100"
-										>
-											Delete
-										</button>
-									</form>
+									<button
+										type="button"
+										onclick={() => openDeleteModal(record.recordId)}
+										class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-red-700/10 hover:bg-red-100"
+									>
+										Delete
+									</button>
 								</td>
 							{/if}
 						</tr>
@@ -589,7 +646,13 @@
 							<td colspan={showDelete ? 6 : 5} class="px-3 py-2 text-right text-xs"> Total: </td>
 							<td class="px-3 py-2 text-xs whitespace-nowrap">₱{totalOrderAmount()}</td>
 							<td class="px-3 py-2 text-xs whitespace-nowrap">₱{totalPaidAmount()}</td>
-							<td class="px-3 py-2 text-xs whitespace-nowrap">-₱{totalBalance()}</td>
+							<td class="px-3 py-2 text-xs whitespace-nowrap">
+								{#if Number(totalBalance()) < 0}
+									-₱{Math.abs(Number(totalBalance())).toFixed(2)}
+								{:else}
+									+₱{Number(totalBalance()).toFixed(2)}
+								{/if}
+							</td>
 							<td colspan={showDelete ? 2 : 1}></td>
 						</tr>
 					</tfoot>
@@ -646,17 +709,23 @@
 									/>
 								</svg>
 							</button>
-							{#each Array.from({ length: totalPages }, (_, i) => i + 1) as page}
-								<button
-									onclick={() => goToPage(page)}
-									class={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-										page === currentPage
-											? 'z-10 bg-indigo-600 text-white'
-											: 'text-gray-900 ring-1 ring-gray-300 ring-inset hover:bg-gray-50'
-									}`}
-								>
-									{page}
-								</button>
+							{#each getPageList(totalPages, currentPage) as pageItem}
+								{#if pageItem === '...'}
+									<span class="relative inline-flex items-center px-4 py-2 text-sm text-gray-500"
+										>{pageItem}</span
+									>
+								{:else}
+									<button
+										onclick={() => goToPage(Number(pageItem))}
+										class={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+											pageItem === currentPage
+												? 'z-10 bg-indigo-600 text-white'
+												: 'text-gray-900 ring-1 ring-gray-300 ring-inset hover:bg-gray-50'
+										}`}
+									>
+										{pageItem}
+									</button>
+								{/if}
 							{/each}
 							<button
 								onclick={nextPage}
@@ -686,6 +755,65 @@
 		</div>
 	{/if}
 </div>
+
+{#if showPasswordModal}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden">
+		<div class="mx-4 w-full max-w-md rounded-lg bg-white shadow-lg">
+			<div class="p-4">
+				<h3 class="text-lg font-medium text-gray-900">Confirm delete</h3>
+				<p class="mt-1 text-sm text-gray-600">
+					Enter your password to confirm deletion of record #{modalDeleteRecordId}.
+				</p>
+				<form
+					bind:this={deleteForm}
+					action="?/deleteRecord"
+					method="POST"
+					class="mt-4"
+					use:enhance={({ cancel }) => {
+						return async ({ result, update }) => {
+							if (result.type === 'failure') {
+								cancel();
+								closeDeleteModal();
+								alert('Wrong password');
+								return;
+							}
+							if (result.type === 'redirect') {
+								closeDeleteModal();
+								alert('Record deleted');
+							}
+							await update();
+						};
+					}}
+				>
+					<input type="hidden" name="record_id" value={modalDeleteRecordId} />
+					<label for="confirm_password" class="block text-sm font-medium text-gray-700"
+						>Password</label
+					>
+					<input
+						id="confirm_password"
+						name="confirm_password"
+						type="password"
+						bind:value={deletePassword}
+						class="mt-1 w-full rounded-md border border-gray-200 p-2 text-sm shadow-sm"
+						required
+					/>
+					<div class="mt-4 flex justify-end gap-2">
+						<button
+							type="button"
+							class="rounded bg-white px-3 py-1 text-sm"
+							onclick={closeDeleteModal}>Cancel</button
+						>
+						<button
+							type="submit"
+							class="rounded bg-red-600 px-3 py-1 text-sm text-white"
+							disabled={!deletePassword}>Confirm Delete</button
+						>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	@media print {

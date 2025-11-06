@@ -110,7 +110,18 @@
 		</div>
 	{/if}
 
-	<form method="POST" action="?/update" class="space-y-6 rounded-lg bg-white p-6 shadow-lg">
+	<form
+		method="POST"
+		action="?/update"
+		use:enhance={() => {
+			return async ({ result }) => {
+				if (result.type === 'success') {
+					goto('/', { replaceState: true });
+				}
+			};
+		}}
+		class="space-y-6 rounded-lg bg-white p-6 shadow-lg"
+	>
 		<input type="hidden" name="recordId" value={record.recordId} />
 
 		<div class="grid gap-6 md:grid-cols-2">

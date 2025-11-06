@@ -2,7 +2,8 @@ import { db } from '$lib/server/db';
 import { caseTypes, clinics, doctors, history, records, orders, orderItems } from '$lib/server/db/schema';
 import { desc, eq, and, sql } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
-import { redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
+import { verifyAdminPassword } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ params, url }) => {
   try {
@@ -159,9 +160,14 @@ export const actions = {
   deleteRecord: async ({ request }) => {
     const data = await request.formData();
     const recordId = data.get("record_id")?.toString();
+    const confirmPassword = data.get("confirm_password")?.toString() ?? '';
     console.log(recordId)
     if (!recordId) {
       return { success: false, error: "Record ID for deletion is required" };
+    }
+    const ok = await verifyAdminPassword(confirmPassword);
+    if (!ok) {
+      return fail(400, { error: 'Wrong password' });
     }
 
     try {
@@ -182,9 +188,9 @@ export const actions = {
 
     } catch (error) {
       console.error('Error deleting record:', error);
-      return { success: false, error: 'Failed to delete record data' };
+      return fail(500, { error: 'Failed to delete record data' });
     }
-    redirect(303, `/`);
+    throw redirect(303, `/`);
 
   }
 } satisfies Actions;

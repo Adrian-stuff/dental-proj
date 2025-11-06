@@ -2,12 +2,24 @@
 	import type { PageProps } from './$types';
 	import { enhance } from '$app/forms';
 	import MonthYearPicker from '$lib/components/MonthYearPicker.svelte';
+	import { onMount } from 'svelte';
 
 	let { data, form }: PageProps = $props();
 	let { currentMonth, currentYear, recordData, supplies } = data;
-	console.log(data.recordData);
 	let selectedMonth = $state(currentMonth);
 	let selectedYear = $state(currentYear);
+	let remarksValue = $state('');
+	let statusValue = $state('');
+
+	onMount(() => {
+		try {
+			const p = new URLSearchParams(window.location.search);
+			remarksValue = p.get('remarks') || '';
+			statusValue = p.get('status') || '';
+		} catch (e) {
+			// noop
+		}
+	});
 
 	interface ClientTransaction {
 		name: string;
@@ -18,6 +30,7 @@
 			orderTotal: number;
 			paymentMethod: string;
 			paymentStatus: string;
+			remarks: string;
 		}>;
 		totalIncome: number;
 	}
@@ -42,7 +55,8 @@
 					paidAmount: paid,
 					orderTotal: parseFloat(record.order?.orderTotal || 0),
 					paymentMethod: record.order?.paymentMethod,
-					paymentStatus: record.order?.paymentStatus
+					paymentStatus: record.order?.paymentStatus,
+					record: record.record // Add the full record object
 				});
 
 				clientData[clinic].totalIncome += paid;
@@ -215,6 +229,12 @@
 			orderTotal: number;
 			paymentMethod: string;
 			paymentStatus: string;
+			balance?: number;
+			record?: {
+				remarks: string;
+				patientName: string;
+				dateDropoff: string;
+			};
 		}>;
 		expenses: Array<{
 			date: string;
@@ -260,14 +280,23 @@
 				const weekData = getWeekData(dropoffDate);
 				const paidAmount = parseFloat(record.order?.paidAmount || 0);
 
+				const balance =
+					record.order?.balance ?? parseFloat(record.order?.orderTotal || 0) - paidAmount;
+
 				weekData.transactions.push({
 					clinic: record.clinicName,
 					dateDropoff: record.record.dateDropoff,
 					patientName: record.record.patientName,
 					paidAmount,
 					orderTotal: parseFloat(record.order?.orderTotal || 0),
+					balance,
 					paymentMethod: record.order?.paymentMethod,
-					paymentStatus: record.order?.paymentStatus
+					paymentStatus: record.order?.paymentStatus,
+					record: {
+						remarks: record.record.remarks || 'pending',
+						patientName: record.record.patientName,
+						dateDropoff: record.record.dateDropoff
+					}
 				});
 				weekData.totalAmount += paidAmount;
 				// Sort transactions by date after adding new one
@@ -389,6 +418,50 @@
 				Update
 			</button>
 		</form>
+
+		<!-- Filters -->
+		<div class="flex items-center gap-2">
+			<label for="payment-status-filter" class="text-sm text-gray-600">Payment Status</label>
+			<select
+				id="payment-status-filter"
+				class="rounded-md border-gray-300 p-2"
+				value={statusValue}
+				onchange={(e) => {
+					const val = (e.target as HTMLSelectElement).value;
+					statusValue = val;
+					const params = new URLSearchParams(window.location.search);
+					if (val) params.set('status', val);
+					else params.delete('status');
+					const base = window.location.pathname + '?' + params.toString();
+					window.location.href = base;
+				}}
+			>
+				<option value="">All</option>
+				<option value="paid">paid</option>
+				<option value="unpaid">unpaid</option>
+			</select>
+
+			<!-- Remarks filter -->
+			<label for="remarks-filter" class="text-sm text-gray-600">Remarks</label>
+			<select
+				id="remarks-filter"
+				class="rounded-md border-gray-300 p-2"
+				value={remarksValue}
+				onchange={(e) => {
+					const val = (e.target as HTMLSelectElement).value;
+					remarksValue = val;
+					const params = new URLSearchParams(window.location.search);
+					if (val) params.set('remarks', val);
+					else params.delete('remarks');
+					const base = window.location.pathname + '?' + params.toString();
+					window.location.href = base;
+				}}
+			>
+				<option value="">All</option>
+				<option value="finished">finished</option>
+				<option value="pending">pending</option>
+			</select>
+		</div>
 	</div>
 
 	<!-- Display selected month and year -->
@@ -419,12 +492,12 @@
 											<th
 												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 											>
-												Clinic Name
+												Drop-off Date
 											</th>
 											<th
 												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 											>
-												Drop-off Date
+												Clinic Name
 											</th>
 											<th
 												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
@@ -444,18 +517,34 @@
 											<th
 												class="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase"
 											>
-												Status
+												Status / Remarks
 											</th>
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-gray-200 bg-white">
 										{#each week.transactions as transaction}
-											<tr>
-												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
-													{transaction.clinic}
-												</td>
+											<tr
+												class={`
+												border-b border-gray-200 transition-colors
+												${
+													transaction.paymentStatus === 'paid' &&
+													(transaction.record?.remarks || 'pending') === 'finished'
+														? 'bg-green-200'
+														: transaction.paymentStatus === 'unpaid' &&
+															  (transaction.record?.remarks || 'pending') === 'finished'
+															? 'bg-red-300'
+															: transaction.paymentStatus === 'unpaid' &&
+																  (transaction.record?.remarks || 'pending') === 'pending'
+																? 'bg-white'
+																: 'bg-violet-300'
+												}
+											`}
+											>
 												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
 													{formatDate(transaction.dateDropoff)}
+												</td>
+												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+													{transaction.clinic}
 												</td>
 												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
 													{transaction.patientName}
@@ -466,12 +555,22 @@
 												<td class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
 													&#8369;{transaction.paidAmount.toFixed(2)}
 												</td>
+
 												<td class="px-6 py-4 text-center text-sm whitespace-nowrap">
 													<span
 														class={`rounded-full px-2 py-1 text-xs font-semibold 
 														${transaction.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
 													>
 														{transaction.paymentStatus}
+													</span>
+													<span
+														class="ml-2 rounded-full px-2 py-1 text-xs font-semibold"
+														class:bg-green-100={transaction.record?.remarks === 'finished'}
+														class:text-green-800={transaction.record?.remarks === 'finished'}
+														class:bg-yellow-100={transaction.record?.remarks === 'pending'}
+														class:text-yellow-800={transaction.record?.remarks === 'pending'}
+													>
+														{transaction.record?.remarks || 'pending'}
 													</span>
 												</td>
 											</tr>
