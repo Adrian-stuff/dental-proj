@@ -1,8 +1,9 @@
 import { db } from '$lib/server/db';
 import { caseTypes, clinics, doctors, records } from '$lib/server/db/schema';
-import { error, redirect } from '@sveltejs/kit';
+import { error, redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { desc, eq, sql } from 'drizzle-orm';
+import { verifyAdminPassword } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
@@ -57,6 +58,18 @@ export const actions = {
     const formData = await request.formData();
     const recordId = formData.get('recordId');
     const doctorId = parseInt(formData.get('doctorId')?.toString() || '0');
+    const confirmPassword = formData.get('confirm_password')?.toString() ?? '';
+    
+    // Verify password
+    if (!confirmPassword) {
+      return fail(400, { error: 'Password is required' });
+    }
+    
+    const ok = await verifyAdminPassword(confirmPassword);
+    if (!ok) {
+      return fail(400, { error: 'Wrong password' });
+    }
+    
     console.log(formData)
     try {
       // Parse the recordId to ensure it's a number

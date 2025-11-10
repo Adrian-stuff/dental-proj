@@ -24,6 +24,10 @@
 	let showClinicDropdown = $state(false);
 	let filteredClinics = $state(allClinics);
 
+	// State for form fields to preserve user input
+	let patientName = $state(record.patientName);
+	let remarks = $state(record.remarks || 'pending');
+
 	// Initialize with current values
 	onMount(() => {
 		// Set initial clinic
@@ -87,6 +91,22 @@
 			doctorInputValue = doctor.doctorName;
 		}
 	}
+
+	// Password-confirmation modal for updates
+	let showPasswordModal = $state(false);
+	let editPassword = $state('');
+	let editForm: HTMLFormElement | null = $state(null);
+
+	function openPasswordModal() {
+		editPassword = '';
+		showPasswordModal = true;
+	}
+
+	function closePasswordModal() {
+		showPasswordModal = false;
+		editPassword = '';
+		// Don't reset the form - preserve user's input
+	}
 </script>
 
 <div class="mx-auto max-w-2xl px-4 py-8">
@@ -111,11 +131,21 @@
 	{/if}
 
 	<form
+		bind:this={editForm}
 		method="POST"
 		action="?/update"
-		use:enhance={() => {
+		use:enhance={({ cancel }) => {
 			return async ({ result }) => {
+				if (result.type === 'failure') {
+					cancel();
+					// Only close modal and clear password, don't reset form
+					showPasswordModal = false;
+					editPassword = '';
+					alert(result.data?.error || 'Wrong password');
+					return;
+				}
 				if (result.type === 'success') {
+					closePasswordModal();
 					goto('/', { replaceState: true });
 				}
 			};
@@ -216,7 +246,7 @@
 						type="text"
 						id="patient_name"
 						name="patientName"
-						value={record.patientName}
+						bind:value={patientName}
 						required
 						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
 						placeholder="Patient name"
@@ -230,8 +260,8 @@
 				<select
 					id="remarks"
 					name="remarks"
+					bind:value={remarks}
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-					value={record.remarks || 'pending'}
 				>
 					<option value="pending">Pending</option>
 					<option value="finished">Finished</option>
@@ -241,12 +271,83 @@
 			<!-- Submit Button -->
 			<div class="flex justify-end">
 				<button
-					type="submit"
+					type="button"
+					onclick={() => {
+						openPasswordModal();
+					}}
 					class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
 				>
 					Update Record
 				</button>
 			</div>
 		</div>
+		<!-- Hidden password field that will be populated by modal -->
+		<input type="hidden" name="confirm_password" value={editPassword} />
 	</form>
+
+	<!-- Password Confirmation Modal -->
+	{#if showPasswordModal}
+		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden">
+			<div class="mx-4 w-full max-w-md rounded-lg bg-white shadow-lg">
+				<div class="p-4">
+					<h3 class="text-lg font-medium text-gray-900">Confirm update</h3>
+					<p class="mt-1 text-sm text-gray-600">
+						Enter your password to confirm updating record #{record.recordId}.
+					</p>
+					<div class="mt-4">
+						<label for="edit_password" class="block text-sm font-medium text-gray-700"
+							>Password</label
+						>
+						<input
+							id="edit_password"
+							type="password"
+							bind:value={editPassword}
+							class="mt-1 w-full rounded-md border border-gray-200 p-2 text-sm shadow-sm"
+							required
+							autofocus
+							onkeydown={(e) => {
+								if (e.key === 'Enter' && editPassword && editForm) {
+									e.preventDefault();
+									// Update the hidden password field
+									const hiddenField = editForm.querySelector(
+										'input[name="confirm_password"]'
+									) as HTMLInputElement;
+									if (hiddenField) {
+										hiddenField.value = editPassword;
+									}
+									// Submit the original form
+									editForm.requestSubmit();
+								}
+							}}
+						/>
+						<div class="mt-4 flex justify-end gap-2">
+							<button
+								type="button"
+								class="rounded border border-gray-300 bg-white px-3 py-1 text-sm hover:bg-gray-50"
+								onclick={closePasswordModal}>Cancel</button
+							>
+							<button
+								type="button"
+								class="rounded bg-indigo-600 px-3 py-1 text-sm text-white hover:bg-indigo-500"
+								disabled={!editPassword}
+								onclick={() => {
+									if (editPassword && editForm) {
+										// Update the hidden password field
+										const hiddenField = editForm.querySelector(
+											'input[name="confirm_password"]'
+										) as HTMLInputElement;
+										if (hiddenField) {
+											hiddenField.value = editPassword;
+										}
+										// Submit the original form
+										editForm.requestSubmit();
+									}
+								}}>Confirm Update</button
+							>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>

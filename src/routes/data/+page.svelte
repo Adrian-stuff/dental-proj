@@ -22,9 +22,10 @@
 	// Handle date changes
 	function handleDateChange(event: Event, field: 'startDate' | 'endDate') {
 		const input = event.target as HTMLInputElement;
-		const value = data.selectedPeriod === 'month' 
-			? input.value + '-01'  // Add day for month view
-			: input.value;         // Use full date for daily view
+		const value =
+			data.selectedPeriod === 'month'
+				? input.value + '-01' // Add day for month view
+				: input.value; // Use full date for daily view
 		updateFilters({ [field]: value });
 	}
 
@@ -254,9 +255,9 @@
 				type={data.selectedPeriod === 'month' ? 'month' : 'date'}
 				id="startDate"
 				class="ml-2 rounded border p-2"
-				value={data.selectedPeriod === 'month' 
+				value={data.selectedPeriod === 'month'
 					? formatDateForInput(data.dateRange.start || getMonthStart(new Date()))
-					: (data.dateRange.start || getMonthStart(new Date()))}
+					: data.dateRange.start || getMonthStart(new Date())}
 				on:change={(e) => handleDateChange(e, 'startDate')}
 			/>
 		</div>
@@ -268,7 +269,7 @@
 				class="ml-2 rounded border p-2"
 				value={data.selectedPeriod === 'month'
 					? formatDateForInput(data.dateRange.end || getMonthEnd(new Date()))
-					: (data.dateRange.end || getMonthEnd(new Date()))}
+					: data.dateRange.end || getMonthEnd(new Date())}
 				on:change={(e) => handleDateChange(e, 'endDate')}
 			/>
 		</div>
