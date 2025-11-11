@@ -136,6 +136,12 @@
 	let deletePassword = $state('');
 	let deleteForm: HTMLFormElement | null = $state(null);
 
+	const modalDeleteRecord = $derived(
+		modalDeleteRecordId
+			? data.records?.find((r) => r.recordId === modalDeleteRecordId)
+			: null
+	);
+
 	function openDeleteModal(id: number) {
 		modalDeleteRecordId = id;
 		deletePassword = '';
@@ -756,13 +762,61 @@
 	{/if}
 </div>
 
-{#if showPasswordModal}
+{#if showPasswordModal && modalDeleteRecord}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden">
-		<div class="mx-4 w-full max-w-md rounded-lg bg-white shadow-lg">
+		<div class="mx-4 w-full max-w-lg rounded-lg bg-white shadow-lg">
 			<div class="p-4">
 				<h3 class="text-lg font-medium text-gray-900">Confirm delete</h3>
-				<p class="mt-1 text-sm text-gray-600">
-					Enter your password to confirm deletion of record #{modalDeleteRecordId}.
+				<div class="mt-3 rounded-md bg-gray-50 p-3 text-sm">
+					<p class="mb-2 font-semibold text-gray-900">Record Information:</p>
+					<div class="space-y-1.5 text-gray-700">
+						<div class="flex">
+							<span class="w-28 font-medium">Record ID:</span>
+							<span>{modalDeleteRecord.recordId}</span>
+						</div>
+						<div class="flex">
+							<span class="w-28 font-medium">Patient:</span>
+							<span>{modalDeleteRecord.patientName}</span>
+						</div>
+						<div class="flex">
+							<span class="w-28 font-medium">Clinic:</span>
+							<span>{modalDeleteRecord.clinicName}</span>
+						</div>
+						<div class="flex">
+							<span class="w-28 font-medium">Date Pickup:</span>
+							<span>{modalDeleteRecord.datePickup || '-'}</span>
+						</div>
+						<div class="flex">
+							<span class="w-28 font-medium">Date Dropoff:</span>
+							<span>{modalDeleteRecord.dateDropoff || '-'}</span>
+						</div>
+						<div class="flex">
+							<span class="w-28 font-medium">Total Amount:</span>
+							<span>₱{modalDeleteRecord.orderTotal}</span>
+						</div>
+						<div class="flex">
+							<span class="w-28 font-medium">Paid Amount:</span>
+							<span>₱{modalDeleteRecord.paidAmount}</span>
+						</div>
+						<div class="flex">
+							<span class="w-28 font-medium">Status:</span>
+							<span class="flex items-center gap-2">
+								<span
+									class={`rounded-full px-2 py-0.5 text-xs font-medium ${
+										modalDeleteRecord.paymentStatus === 'paid'
+											? 'bg-green-100 text-green-800'
+											: 'bg-red-100 text-red-800'
+									}`}
+								>
+									{modalDeleteRecord.paymentStatus}
+								</span>
+								<span class="text-xs text-gray-600">({modalDeleteRecord.remarks || 'No remarks'})</span>
+							</span>
+						</div>
+					</div>
+				</div>
+				<p class="mt-3 text-sm text-gray-600">
+					Enter your password to confirm deletion of this record.
 				</p>
 				<form
 					bind:this={deleteForm}

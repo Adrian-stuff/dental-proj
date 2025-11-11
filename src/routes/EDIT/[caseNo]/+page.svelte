@@ -97,6 +97,53 @@
 	let editPassword = $state('');
 	let editForm: HTMLFormElement | null = $state(null);
 
+	// Compute changes that will be made
+	const changes = $derived.by(() => {
+		const changesList: Array<{ field: string; oldValue: string; newValue: string }> = [];
+
+		// Check clinic change
+		const originalClinicName = record.clinicName || '';
+		if (clinicInputValue !== originalClinicName) {
+			changesList.push({
+				field: 'Clinic',
+				oldValue: originalClinicName,
+				newValue: clinicInputValue
+			});
+		}
+
+		// Check doctor change
+		const originalDoctorName = record.doctorName || '';
+		if (doctorInputValue !== originalDoctorName) {
+			changesList.push({
+				field: 'Doctor',
+				oldValue: originalDoctorName,
+				newValue: doctorInputValue
+			});
+		}
+
+		// Check patient name change
+		const originalPatientName = record.patientName || '';
+		if (patientName !== originalPatientName) {
+			changesList.push({
+				field: 'Patient Name',
+				oldValue: originalPatientName,
+				newValue: patientName
+			});
+		}
+
+		// Check remarks change
+		const originalRemarks = record.remarks || 'pending';
+		if (remarks !== originalRemarks) {
+			changesList.push({
+				field: 'Remarks',
+				oldValue: originalRemarks,
+				newValue: remarks
+			});
+		}
+
+		return changesList;
+	});
+
 	function openPasswordModal() {
 		editPassword = '';
 		showPasswordModal = true;
@@ -288,11 +335,71 @@
 	<!-- Password Confirmation Modal -->
 	{#if showPasswordModal}
 		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden">
-			<div class="mx-4 w-full max-w-md rounded-lg bg-white shadow-lg">
+			<div class="mx-4 w-full max-w-lg rounded-lg bg-white shadow-lg">
 				<div class="p-4">
 					<h3 class="text-lg font-medium text-gray-900">Confirm update</h3>
-					<p class="mt-1 text-sm text-gray-600">
-						Enter your password to confirm updating record #{record.recordId}.
+					<div class="mt-3 rounded-md bg-gray-50 p-3 text-sm">
+						<p class="mb-2 font-semibold text-gray-900">Record Information:</p>
+						<div class="space-y-1.5 text-gray-700">
+							<div class="flex">
+								<span class="w-28 font-medium">Record ID:</span>
+								<span>{record.recordId}</span>
+							</div>
+							<div class="flex">
+								<span class="w-28 font-medium">Patient:</span>
+								<span>{record.patientName}</span>
+							</div>
+							<div class="flex">
+								<span class="w-28 font-medium">Clinic:</span>
+								<span>{record.clinicName}</span>
+							</div>
+							<div class="flex">
+								<span class="w-28 font-medium">Doctor:</span>
+								<span>{record.doctorName || '-'}</span>
+							</div>
+							<div class="flex">
+								<span class="w-28 font-medium">Date Pickup:</span>
+								<span>{record.datePickup || '-'}</span>
+							</div>
+							<div class="flex">
+								<span class="w-28 font-medium">Date Dropoff:</span>
+								<span>{record.dateDropoff || '-'}</span>
+							</div>
+							<div class="flex">
+								<span class="w-28 font-medium">Remarks:</span>
+								<span>{record.remarks || 'No remarks'}</span>
+							</div>
+						</div>
+					</div>
+
+					{#if changes.length > 0}
+						<div class="mt-3 rounded-md bg-blue-50 p-3 text-sm">
+							<p class="mb-2 font-semibold text-blue-900">Changes to be made:</p>
+							<div class="space-y-2 text-blue-800">
+								{#each changes as change}
+									<div class="flex flex-col gap-1">
+										<div class="font-medium">{change.field}:</div>
+										<div class="flex items-center gap-2 pl-2">
+											<span class="rounded bg-red-100 px-2 py-0.5 text-xs line-through">
+												{change.oldValue || '(empty)'}
+											</span>
+											<span class="text-blue-600">→</span>
+											<span class="rounded bg-green-100 px-2 py-0.5 text-xs font-medium">
+												{change.newValue || '(empty)'}
+											</span>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{:else}
+						<div class="mt-3 rounded-md bg-yellow-50 p-3 text-sm">
+							<p class="text-yellow-800">No changes detected. All values remain the same.</p>
+						</div>
+					{/if}
+
+					<p class="mt-3 text-sm text-gray-600">
+						Enter your password to confirm updating this record.
 					</p>
 					<div class="mt-4">
 						<label for="edit_password" class="block text-sm font-medium text-gray-700"
