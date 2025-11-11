@@ -2,6 +2,7 @@
 	import type { PageProps } from './$types';
 	import { enhance } from '$app/forms';
 	import MonthYearPicker from '$lib/components/MonthYearPicker.svelte';
+	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
 	import { onMount } from 'svelte';
 
 	let { data, form }: PageProps = $props();
@@ -11,6 +12,14 @@
 	let remarksValue = $state('');
 	let statusValue = $state('');
 	let clinicValue = $state('');
+
+	const clinicOptions = $derived([
+		{ value: '', label: 'All Clinics' },
+		...((data as any).clinics?.map((clinic: any) => ({
+			value: clinic.clinicId.toString(),
+			label: clinic.clinicName
+		})) || [])
+	]);
 
 	onMount(() => {
 		try {
@@ -403,7 +412,7 @@
 	}
 </script>
 
-<div class="container mx-auto flex flex-col items-center justify-center p-4">
+<div class="flex w-full flex-col p-4">
 	<div class="mb-6 flex w-full items-center justify-between">
 		<h1 class="text-2xl font-bold">Financial Summary</h1>
 
@@ -465,26 +474,19 @@
 			</select>
 
 			<!-- Clinic filter -->
-			<label for="clinic-filter" class="text-sm text-gray-600">Clinic</label>
-			<select
-				id="clinic-filter"
-				class="rounded-md border-gray-300 p-2"
-				value={clinicValue}
-				onchange={(e) => {
-					const val = (e.target as HTMLSelectElement).value;
-					clinicValue = val;
+			<SearchableSelect
+				options={clinicOptions}
+				bind:value={clinicValue}
+				label="Clinic"
+				placeholder="Search clinic..."
+				onchange={(val) => {
 					const params = new URLSearchParams(window.location.search);
 					if (val) params.set('clinic_id', val);
 					else params.delete('clinic_id');
 					const base = window.location.pathname + '?' + params.toString();
 					window.location.href = base;
 				}}
-			>
-				<option value="">All Clinics</option>
-				{#each (data as any).clinics || [] as clinic}
-					<option value={clinic.clinicId.toString()}>{clinic.clinicName}</option>
-				{/each}
-			</select>
+			/>
 		</div>
 	</div>
 
