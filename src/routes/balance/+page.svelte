@@ -337,7 +337,7 @@
 						</td>
 						<td class="px-6 py-4 text-center text-sm whitespace-nowrap">
 							<a
-								href={`/?clinic_id=${b.clinicId}`}
+								href={`/?clinic_id=${b.clinicId}&payment_status=unpaid`}
 								class="inline-block rounded bg-indigo-600 px-3 py-1 text-sm font-medium text-white hover:bg-indigo-500"
 								>Details</a
 							>

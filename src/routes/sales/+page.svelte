@@ -10,12 +10,14 @@
 	let selectedYear = $state(currentYear);
 	let remarksValue = $state('');
 	let statusValue = $state('');
+	let clinicValue = $state('');
 
 	onMount(() => {
 		try {
 			const p = new URLSearchParams(window.location.search);
 			remarksValue = p.get('remarks') || '';
 			statusValue = p.get('status') || '';
+			clinicValue = p.get('clinic_id') || '';
 		} catch (e) {
 			// noop
 		}
@@ -156,43 +158,6 @@
 	// Recalculate whenever dependencies change
 	$effect(() => {
 		recalculateFinancialData();
-	});
-
-	// Pagination state for weeks
-	let currentWeekIndex = $state(0);
-
-	// Get current week to display
-	const currentWeek = $derived.by(() => {
-		if (financialData.weekly.length === 0) return null;
-		// Ensure currentWeekIndex is within bounds
-		if (currentWeekIndex < 0) currentWeekIndex = 0;
-		if (currentWeekIndex >= financialData.weekly.length) {
-			currentWeekIndex = Math.max(0, financialData.weekly.length - 1);
-		}
-		return financialData.weekly[currentWeekIndex];
-	});
-
-	const totalWeeks = $derived.by(() => financialData.weekly.length);
-	const hasNextWeek = $derived.by(() => currentWeekIndex < totalWeeks - 1);
-	const hasPreviousWeek = $derived.by(() => currentWeekIndex > 0);
-
-	function goToNextWeek() {
-		if (hasNextWeek) {
-			currentWeekIndex++;
-		}
-	}
-
-	function goToPreviousWeek() {
-		if (hasPreviousWeek) {
-			currentWeekIndex--;
-		}
-	}
-
-	// Reset to first week when data changes
-	$effect(() => {
-		if (financialData.weekly.length > 0 && currentWeekIndex >= financialData.weekly.length) {
-			currentWeekIndex = 0;
-		}
 	});
 
 	// Add weekly salary from input
@@ -498,6 +463,28 @@
 				<option value="finished">finished</option>
 				<option value="pending">pending</option>
 			</select>
+
+			<!-- Clinic filter -->
+			<label for="clinic-filter" class="text-sm text-gray-600">Clinic</label>
+			<select
+				id="clinic-filter"
+				class="rounded-md border-gray-300 p-2"
+				value={clinicValue}
+				onchange={(e) => {
+					const val = (e.target as HTMLSelectElement).value;
+					clinicValue = val;
+					const params = new URLSearchParams(window.location.search);
+					if (val) params.set('clinic_id', val);
+					else params.delete('clinic_id');
+					const base = window.location.pathname + '?' + params.toString();
+					window.location.href = base;
+				}}
+			>
+				<option value="">All Clinics</option>
+				{#each (data as any).clinics || [] as clinic}
+					<option value={clinic.clinicId.toString()}>{clinic.clinicName}</option>
+				{/each}
+			</select>
 		</div>
 	</div>
 
@@ -509,37 +496,6 @@
 		})}
 	</div>
 
-	<!-- Week Pagination Controls at Top -->
-	{#if totalWeeks > 0}
-		<div class="mb-6 flex w-full items-center justify-between rounded-lg bg-indigo-50 p-4">
-			<button
-				type="button"
-				onclick={goToPreviousWeek}
-				disabled={!hasPreviousWeek}
-				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-			>
-				← Previous Week
-			</button>
-
-			<div class="text-center">
-				<p class="text-sm font-semibold text-gray-700">
-					Week {currentWeekIndex + 1} of {totalWeeks}
-				</p>
-				{#if currentWeek}
-					<p class="text-xs text-gray-600">{currentWeek.weekRange}</p>
-				{/if}
-			</div>
-
-			<button
-				type="button"
-				onclick={goToNextWeek}
-				disabled={!hasNextWeek}
-				class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-			>
-				Next Week →
-			</button>
-		</div>
-	{/if}
 	<!-- Total Profit Section -->
 	<div class="mb-2 w-full rounded-lg bg-white p-6 shadow-md">
 		<h2 class="mb-4 text-xl font-semibold">Summary</h2>
@@ -586,9 +542,9 @@
 	<div class=" w-full rounded-lg bg-white p-6 shadow-md">
 		<h2 class="mb-4 text-xl font-semibold">Income</h2>
 		<div class="overflow-x-auto">
-			{#if currentWeek}
+			{#each financialData.weekly as week}
 				<div class="mb-8">
-					<h3 class="mb-4 text-lg font-semibold">Week: {currentWeek.weekRange}</h3>
+					<h3 class="mb-4 text-lg font-semibold">Week: {week.weekRange}</h3>
 
 					<!-- Tables Container -->
 					<div class="mb-4 flex flex-col gap-4 lg:flex-row">
@@ -632,7 +588,7 @@
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-gray-200 bg-white">
-										{#each currentWeek.transactions as transaction}
+										{#each week.transactions as transaction}
 											<tr
 												class={`
 												border-b border-gray-200 transition-colors
@@ -696,7 +652,7 @@
 												colspan="2"
 												class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
 											>
-												&#8369;{currentWeek.totalAmount.toFixed(2)}
+												&#8369;{week.totalAmount.toFixed(2)}
 											</td>
 										</tr>
 									</tbody>
@@ -734,7 +690,7 @@
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-gray-200 bg-white">
-										{#each currentWeek.expenses as expense, expenseIndex}
+										{#each week.expenses as expense, expenseIndex}
 											<tr>
 												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
 													{formatDate(expense.date)}
@@ -763,7 +719,7 @@
 															type="button"
 															class="ml-2 rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-700"
 															onclick={() =>
-																deleteWeeklySalaryExpense(currentWeek.weekRange, expenseIndex)}
+																deleteWeeklySalaryExpense(week.weekRange, expenseIndex)}
 														>
 															Delete
 														</button>
@@ -782,7 +738,7 @@
 												colspan="2"
 												class="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap text-gray-900"
 											>
-												&#8369;{currentWeek.totalExpenses.toFixed(2)}
+												&#8369;{week.totalExpenses.toFixed(2)}
 											</td>
 										</tr>
 									</tbody>
@@ -798,13 +754,13 @@
 											type="text"
 											class="mb-2 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
 											placeholder="Enter staff name"
-											value={salaryInputs.get(currentWeek.weekRange)?.staffName ?? ''}
+											value={salaryInputs.get(week.weekRange)?.staffName ?? ''}
 											oninput={(e) => {
-												const current = salaryInputs.get(currentWeek.weekRange) ?? {
+												const current = salaryInputs.get(week.weekRange) ?? {
 													staffName: '',
 													amount: 0
 												};
-												salaryInputs.set(currentWeek.weekRange, {
+												salaryInputs.set(week.weekRange, {
 													...current,
 													staffName: (e.target as HTMLInputElement).value
 												});
@@ -818,13 +774,13 @@
 											placeholder="Enter weekly salary amount"
 											min="0"
 											step="0.01"
-											value={salaryInputs.get(currentWeek.weekRange)?.amount ?? 0}
+											value={salaryInputs.get(week.weekRange)?.amount ?? 0}
 											oninput={(e) => {
-												const current = salaryInputs.get(currentWeek.weekRange) ?? {
+												const current = salaryInputs.get(week.weekRange) ?? {
 													staffName: '',
 													amount: 0
 												};
-												salaryInputs.set(currentWeek.weekRange, {
+												salaryInputs.set(week.weekRange, {
 													...current,
 													amount: Number((e.target as HTMLInputElement).value)
 												});
@@ -835,10 +791,10 @@
 										class="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
 										onclick={(e) => {
 											e.preventDefault();
-											const input = salaryInputs.get(currentWeek.weekRange);
+											const input = salaryInputs.get(week.weekRange);
 											if (input?.amount > 0 && input?.staffName) {
-												addWeeklySalary(currentWeek.weekRange, input.staffName, input.amount);
-												salaryInputs.delete(currentWeek.weekRange);
+												addWeeklySalary(week.weekRange, input.staffName, input.amount);
+												salaryInputs.delete(week.weekRange);
 											}
 										}}
 									>
@@ -855,19 +811,19 @@
 							<div>
 								<p class="text-sm font-semibold text-gray-600">Weekly Income</p>
 								<p class="text-lg font-bold text-gray-900">
-									&#8369;{currentWeek.totalAmount.toFixed(2)}
+									&#8369;{week.totalAmount.toFixed(2)}
 								</p>
 							</div>
 							<div>
 								<p class="text-sm font-semibold text-gray-600">Weekly Expenses</p>
 								<p class="text-lg font-bold text-gray-900">
-									&#8369;{currentWeek.totalExpenses.toFixed(2)}
+									&#8369;{week.totalExpenses.toFixed(2)}
 								</p>
 							</div>
 							<div>
 								<p class="text-sm font-semibold text-gray-600">Total Unpaid</p>
 								<p class="text-lg font-bold text-red-600">
-									&#8369;{currentWeek.transactions
+									&#8369;{week.transactions
 										.reduce((total, t) => total + (t.orderTotal - t.paidAmount), 0)
 										.toFixed(2)}
 								</p>
@@ -875,19 +831,15 @@
 							<div>
 								<p class="text-sm font-semibold text-gray-600">Weekly Profit</p>
 								<p
-									class={`text-lg font-bold ${currentWeek.weeklyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}
+									class={`text-lg font-bold ${week.weeklyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}
 								>
-									&#8369;{currentWeek.weeklyProfit.toFixed(2)}
+									&#8369;{week.weeklyProfit.toFixed(2)}
 								</p>
 							</div>
 						</div>
 					</div>
 				</div>
-			{:else}
-				<div class="py-8 text-center text-gray-500">
-					No weekly data available for the selected month.
-				</div>
-			{/if}
+			{/each}
 		</div>
 	</div>
 </div>
