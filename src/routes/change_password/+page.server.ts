@@ -1,5 +1,5 @@
 import type { Actions, PageServerLoad } from './$types';
-import { isPasswordSet, setAdminPassword, verifyAdminPassword } from '$lib/server/auth';
+import { isPasswordSet, setAdminPassword, verifyAdminPassword, removeAdminPassword } from '$lib/server/auth';
 import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async () => {
@@ -8,7 +8,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-  default: async ({ request }) => {
+  setPassword: async ({ request }) => {
     const form = await request.formData();
     const current = (form.get('current') || '').toString();
     const next = (form.get('next') || '').toString();
@@ -30,7 +30,36 @@ export const actions: Actions = {
     }
 
     await setAdminPassword(next);
-    return { message: 'Password updated successfully' };
+    const isSet = await isPasswordSet();
+    return { 
+      message: isSet ? 'Password updated successfully' : 'Password set successfully',
+      isSet: true 
+    };
+  },
+  resetPassword: async ({ request }) => {
+    const form = await request.formData();
+    const confirmPassword = (form.get('confirm_password') || '').toString();
+    
+    // Verify current password before allowing reset
+    const passwordIsSet = await isPasswordSet();
+    if (!passwordIsSet) {
+      return fail(400, { error: 'No password is set to reset' });
+    }
+    
+    if (!confirmPassword) {
+      return fail(400, { error: 'Password confirmation is required' });
+    }
+    
+    const ok = await verifyAdminPassword(confirmPassword);
+    if (!ok) {
+      return fail(400, { error: 'Password is incorrect' });
+    }
+    
+    await removeAdminPassword();
+    return { 
+      message: 'Password has been removed successfully',
+      isSet: false 
+    };
   }
 };
 

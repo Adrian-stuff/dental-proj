@@ -3,7 +3,7 @@ import { caseTypes, clinics, doctors, records } from '$lib/server/db/schema';
 import { error, redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { desc, eq, sql } from 'drizzle-orm';
-import { verifyAdminPassword } from '$lib/server/auth';
+import { verifyAdminPassword, isPasswordSet } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
@@ -42,10 +42,13 @@ export const load: PageServerLoad = async ({ params }) => {
       .from(clinics)
       .orderBy(desc(clinics.clinicName));
 
+    const passwordIsSet = await isPasswordSet();
+
     return {
       record: recordData[0],
       doctors: doctorsData,
-      clinics: clinicsData
+      clinics: clinicsData,
+      passwordIsSet
     };
   } catch (e) {
     console.error('Error fetching record:', e);
@@ -59,6 +62,12 @@ export const actions = {
     const recordId = formData.get('recordId');
     const doctorId = parseInt(formData.get('doctorId')?.toString() || '0');
     const confirmPassword = formData.get('confirm_password')?.toString() ?? '';
+    
+    // Check if password is set
+    const passwordIsSet = await isPasswordSet();
+    if (!passwordIsSet) {
+      return fail(400, { error: 'No password is set. Please set a password first in the Change Password page.' });
+    }
     
     // Verify password
     if (!confirmPassword) {

@@ -66,4 +66,8 @@ export async function setAdminPassword(newPassword: string): Promise<void> {
   }
 }
 
+export async function removeAdminPassword(): Promise<void> {
+  await db.delete(appSettings).where(eq(appSettings.key, PASSWORD_KEY));
+}
+
 

@@ -145,6 +145,10 @@
 	});
 
 	function openPasswordModal() {
+		if (!data.passwordIsSet) {
+			alert('No password is set. Please set a password first in the Change Password page.');
+			return;
+		}
 		editPassword = '';
 		showPasswordModal = true;
 	}
@@ -167,6 +171,15 @@
 		</a>
 	</div>
 
+	{#if !data.passwordIsSet}
+		<div class="mb-4 rounded-md bg-yellow-50 p-4 text-yellow-800">
+			<p class="font-semibold">⚠️ No password is set</p>
+			<p class="mt-1 text-sm">
+				You need to set a password before you can edit records. Please 
+				<a href="/change_password" class="underline font-medium">set a password</a> first.
+			</p>
+		</div>
+	{/if}
 	{#if form?.message}
 		<div
 			class="mb-4 rounded-md p-4 {form.success
@@ -174,6 +187,11 @@
 				: 'bg-red-50 text-red-700'}"
 		>
 			{form.message}
+		</div>
+	{/if}
+	{#if form?.error}
+		<div class="mb-4 rounded-md bg-red-50 p-4 text-red-700">
+			{form.error}
 		</div>
 	{/if}
 

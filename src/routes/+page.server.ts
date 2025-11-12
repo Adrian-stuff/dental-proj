@@ -3,7 +3,7 @@ import { caseTypes, clinics, doctors, history, records, orders, orderItems } fro
 import { desc, eq, and, sql } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
-import { verifyAdminPassword } from '$lib/server/auth';
+import { verifyAdminPassword, isPasswordSet } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ params, url }) => {
   try {
@@ -143,12 +143,15 @@ export const load: PageServerLoad = async ({ params, url }) => {
       clinics: clinicData,
       filters: Object.fromEntries(url.searchParams)
     })
+    const passwordIsSet = await isPasswordSet();
+    
     return {
       records: recordData,
       caseTypes: caseTypeData,
       doctors: doctorData,
       clinics: clinicData,
-      filters: Object.fromEntries(url.searchParams)
+      filters: Object.fromEntries(url.searchParams),
+      passwordIsSet
     };
   } catch (error) {
     console.error('Error:', error);
@@ -165,6 +168,13 @@ export const actions = {
     if (!recordId) {
       return { success: false, error: "Record ID for deletion is required" };
     }
+    
+    // Check if password is set
+    const passwordIsSet = await isPasswordSet();
+    if (!passwordIsSet) {
+      return fail(400, { error: 'No password is set. Please set a password first in the Change Password page.' });
+    }
+    
     const ok = await verifyAdminPassword(confirmPassword);
     if (!ok) {
       return fail(400, { error: 'Wrong password' });
