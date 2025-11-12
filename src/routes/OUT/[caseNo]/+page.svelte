@@ -16,6 +16,8 @@
 	let videoElement: HTMLVideoElement = $state();
 	let canvasElement: HTMLCanvasElement = $state();
 	let showSettingsModal = $state(false);
+	let availableCameras = $state<MediaDeviceInfo[]>([]);
+	let selectedCameraId = $state<string>('');
 
 	function handleInImageChange() {
 		const file = in_file.files[0];
@@ -42,6 +44,18 @@
 		});
 	});
 
+	async function loadCameras() {
+		try {
+			const devices = await navigator.mediaDevices.enumerateDevices();
+			availableCameras = devices.filter((device) => device.kind === 'videoinput');
+			if (availableCameras.length > 0 && !selectedCameraId) {
+				selectedCameraId = availableCameras[0].deviceId;
+			}
+		} catch (err) {
+			console.error('Error loading cameras:', err);
+		}
+	}
+
 	// Function to handle camera operations
 	async function startCamera() {
 		try {
@@ -52,10 +66,17 @@
 				throw new Error('Camera permission was denied');
 			}
 
-			stream = await navigator.mediaDevices.getUserMedia({
-				video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+			// Load cameras first
+			await loadCameras();
+
+			const constraints: MediaStreamConstraints = {
+				video: selectedCameraId
+					? { deviceId: { exact: selectedCameraId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+					: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
 				audio: false
-			});
+			};
+
+			stream = await navigator.mediaDevices.getUserMedia(constraints);
 
 			if (videoElement) {
 				videoElement.srcObject = stream;
@@ -107,6 +128,11 @@
 		stopCamera();
 		// Remove event listener when modal closes
 		window.removeEventListener('keydown', handleKeyPress);
+	}
+
+	async function switchCamera() {
+		stopCamera();
+		await startCamera();
 	}
 
 	function handleKeyPress(e: KeyboardEvent) {
@@ -252,6 +278,25 @@
 					</svg>
 				</button>
 			</div>
+			{#if availableCameras.length > 1}
+				<div class="mb-4">
+					<label for="camera-select" class="block text-sm font-medium text-gray-700 mb-2">
+						Select Camera
+					</label>
+					<select
+						id="camera-select"
+						bind:value={selectedCameraId}
+						onchange={switchCamera}
+						class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+					>
+						{#each availableCameras as camera}
+							<option value={camera.deviceId}>
+								{camera.label || `Camera ${availableCameras.indexOf(camera) + 1}`}
+							</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
 			<div class="relative">
 				<video bind:this={videoElement} autoplay playsinline class="max-w-78 rounded-lg"></video>
 				<canvas bind:this={canvasElement} class="hidden"></canvas>
