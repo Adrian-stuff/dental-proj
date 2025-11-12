@@ -336,18 +336,11 @@
 							{/if}
 						</td>
 						<td class="px-6 py-4 text-center text-sm whitespace-nowrap">
-							<div class="flex items-center justify-center gap-2">
-								<a
-									href={`/?clinic_id=${b.clinicId}&remarks=finished&payment_status=unpaid`}
-									class="inline-block rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-500"
-									>Finished</a
-								>
-								<a
-									href={`/?clinic_id=${b.clinicId}&remarks=pending&payment_status=unpaid`}
-									class="inline-block rounded bg-orange-600 px-3 py-1 text-sm font-medium text-white hover:bg-orange-500"
-									>Pending</a
-								>
-							</div>
+							<a
+								href={`/?clinic_id=${b.clinicId}&remarks=finished&payment_status=unpaid`}
+								class="inline-block rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-500"
+								>Details</a
+							>
 						</td>
 					</tr>
 				{/each}
