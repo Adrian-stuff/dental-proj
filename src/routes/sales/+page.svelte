@@ -9,7 +9,7 @@
 	let { currentMonth, currentYear, recordData, supplies } = data;
 	let selectedMonth = $state(currentMonth);
 	let selectedYear = $state(currentYear);
-	let remarksValue = $state('');
+	let remarksValue = $state('finished');
 	let statusValue = $state('');
 	let clinicValue = $state('');
 
@@ -24,9 +24,16 @@
 	onMount(() => {
 		try {
 			const p = new URLSearchParams(window.location.search);
-			remarksValue = p.get('remarks') || '';
+			remarksValue = p.get('remarks') || 'finished';
 			statusValue = p.get('status') || '';
 			clinicValue = p.get('clinic_id') || '';
+
+			// If no remarks parameter in URL, set it to 'finished' and update URL
+			if (!p.get('remarks')) {
+				p.set('remarks', 'finished');
+				const base = window.location.pathname + '?' + p.toString();
+				window.history.replaceState({}, '', base);
+			}
 		} catch (e) {
 			// noop
 		}

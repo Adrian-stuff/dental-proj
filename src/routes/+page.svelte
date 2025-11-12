@@ -2,6 +2,8 @@
 	import type { PageProps } from './$types';
 	import { formatDate, generateRecordsSummary, getCurrentDateTime, getRecordDateRange } from '$lib';
 	import { enhance } from '$app/forms';
+	import { afterNavigate } from '$app/navigation';
+	import { tick } from 'svelte';
 
 	const { data }: PageProps = $props();
 	// Filter states
@@ -9,6 +11,7 @@
 		clinic: false,
 		caseType: false,
 		caseNo: false,
+		recordid: false,
 		patient: false,
 		remark: false,
 		payment: false,
@@ -34,6 +37,162 @@
 	// Show all clinics derived state
 	let showAllClinics = $derived(filters.clinic && !selectedClinicName && clinicSearch.length === 0);
 	let selectedClinicId = $state(null);
+
+	// Filter input values
+	let caseTypeId = $state('');
+	let caseNo = $state('');
+	let patientName = $state('');
+	let paymentStatus = $state('');
+	let remarks = $state('');
+	let recordId = $state('');
+
+	// Restore filter states from URL parameters
+	let isRestoring = $state(false);
+	let lastRestoredFiltersKey = $state<string>('');
+	
+	async function restoreFiltersFromData() {
+		const filtersData = data.filters;
+		if (!filtersData || typeof filtersData !== 'object') {
+			return;
+		}
+		
+		const hasFilters = Object.keys(filtersData).length > 0;
+		if (!hasFilters || isRestoring) {
+			return;
+		}
+		
+		// Create a key from the filters to detect if they've actually changed
+		const currentFiltersKey = JSON.stringify(filtersData);
+		if (currentFiltersKey === lastRestoredFiltersKey) {
+			return; // Filters haven't changed, don't restore
+		}
+		
+		isRestoring = true;
+		
+		// Reset all filters first
+		filters.clinic = false;
+		filters.caseType = false;
+		filters.caseNo = false;
+		filters.patient = false;
+		filters.remark = false;
+		filters.payment = false;
+		filters.date = false;
+		filters.month = false;
+		
+		// Restore filter checkboxes and values
+		// Set checkbox first, then value to ensure proper binding
+		if (filtersData.clinic_id) {
+			filters.clinic = true;
+			const clinicId = parseInt(filtersData.clinic_id);
+			selectedClinicId = clinicId;
+			const clinic = data.clinics?.find((c) => c.clinicId === clinicId);
+			if (clinic) {
+				selectedClinicName = clinic.clinicName;
+				clinicSearch = clinic.clinicName;
+			}
+		} else {
+			selectedClinicId = null;
+			selectedClinicName = '';
+			clinicSearch = '';
+		}
+		
+		if (filtersData.case_type_id) {
+			// Set checkbox first to show the select
+			filters.caseType = true;
+			// Wait for DOM to update so the select is rendered
+			await tick();
+			// Ensure the value matches the option value type (options use String(type.caseTypeId))
+			const caseTypeIdValue = filtersData.case_type_id;
+			// Convert to string to match the option values which are strings
+			caseTypeId = String(caseTypeIdValue);
+		} else {
+			caseTypeId = '';
+		}
+		
+		if (filtersData.case_no) {
+			filters.caseNo = true;
+			caseNo = String(filtersData.case_no);
+		} else {
+			caseNo = '';
+		}
+		
+		if (filtersData.patient_name) {
+			filters.patient = true;
+			patientName = filtersData.patient_name;
+		} else {
+			patientName = '';
+		}
+		
+		if (filtersData.remarks) {
+			filters.remark = true;
+			remarks = filtersData.remarks;
+		} else {
+			remarks = '';
+		}
+		
+		if (filtersData.payment_status) {
+			filters.payment = true;
+			paymentStatus = filtersData.payment_status;
+		} else {
+			paymentStatus = '';
+		}
+		
+		if (filtersData.record_id) {
+			// Note: Record Id filter doesn't have a checkbox, but we can still restore the value
+			recordId = String(filtersData.record_id);
+		} else {
+			recordId = '';
+		}
+		if (filtersData.start_date && filtersData.end_date) {
+			filters.date = true;
+			startDate = filtersData.start_date;
+			endDate = filtersData.end_date;
+		}
+		// Month filter is handled separately via month/year params or start_date/end_date
+		if (filtersData.start_date && filtersData.end_date) {
+			const start = new Date(filtersData.start_date);
+			const end = new Date(filtersData.end_date);
+			// Check if it's a full month range
+			if (
+				start.getDate() === 1 &&
+				end.getDate() === new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate() &&
+				start.getMonth() === end.getMonth() &&
+				start.getFullYear() === end.getFullYear()
+			) {
+				filters.month = true;
+				selectedMonth = start.getMonth() + 1;
+				selectedYear = start.getFullYear();
+			}
+		}
+		
+		// Mark these filters as restored
+		lastRestoredFiltersKey = currentFiltersKey;
+		
+		// Use setTimeout to ensure DOM is updated before allowing another restoration
+		setTimeout(() => {
+			isRestoring = false;
+		}, 0);
+	}
+	
+	// Restore filters after navigation completes
+	afterNavigate(() => {
+		isRestoring = false;
+		lastRestoredFiltersKey = ''; // Reset to allow restoration on navigation
+		restoreFiltersFromData();
+	});
+	
+	// Also restore when data.filters changes (for initial load and navigation)
+	$effect(() => {
+		// Access data.filters to make the effect track it
+		const filtersData = data.filters;
+		if (!filtersData) return;
+		
+		// Only restore if filters have actually changed (not on every render)
+		const currentKey = JSON.stringify(filtersData);
+		if (currentKey !== lastRestoredFiltersKey) {
+			restoreFiltersFromData();
+		}
+	});
 	// Filter handler functions
 	function handleMonthFilter() {
 		if (filters.month) {
@@ -226,28 +385,32 @@
 
 				<!-- Other Filters - Reuse the same pattern -->
 				{#each ['Case Type', 'Case No', 'Record Id', 'Patient Name', 'Payment Status', 'Remarks'] as filterName}
+					{@const filterKey = filterName === 'Case Type' ? 'caseType' : filterName === 'Case No' ? 'caseNo' : filterName === 'Record Id' ? 'recordid' : filterName === 'Patient Name' ? 'patient' : filterName === 'Payment Status' ? 'payment' : filterName === 'Remarks' ? 'remark' : ''}
 					<div>
 						<label class="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
 							<input
 								type="checkbox"
-								bind:checked={filters[filterName.toLowerCase().replace(' ', '')]}
+								bind:checked={filters[filterKey]}
 								class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600"
 							/>
 							{filterName}
 						</label>
-						{#if filters[filterName.toLowerCase().replace(' ', '')]}
+						{#if filters[filterKey]}
 							{#if filterName === 'Case Type'}
 								<select
 									name="case_type_id"
+									bind:value={caseTypeId}
 									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
 								>
+									<option value="">Select Case Type</option>
 									{#each data.caseTypes as type}
-										<option value={type.caseTypeId}>{type.caseTypeName}</option>
+										<option value={String(type.caseTypeId)}>{type.caseTypeName}</option>
 									{/each}
 								</select>
 							{:else if filterName === 'Payment Status'}
 								<select
 									name="payment_status"
+									bind:value={paymentStatus}
 									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
 								>
 									<option value="paid">Paid</option>
@@ -256,15 +419,31 @@
 							{:else if filterName === 'Remarks'}
 								<select
 									name="remarks"
+									bind:value={remarks}
 									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm"
 								>
 									<option value="pending">Pending</option>
 									<option value="finished">Finished</option>
 								</select>
-							{:else}
+							{:else if filterName === 'Case No'}
 								<input
-									type={filterName === 'Case Number' ? 'number' : 'text'}
-									name={filterName.toLowerCase().replace(' ', '_')}
+									type="number"
+									name="case_no"
+									bind:value={caseNo}
+									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+								/>
+							{:else if filterName === 'Patient Name'}
+								<input
+									type="text"
+									name="patient_name"
+									bind:value={patientName}
+									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+								/>
+							{:else if filterName === 'Record Id'}
+								<input
+									type="number"
+									name="record_id"
+									bind:value={recordId}
 									class="mt-1 w-full rounded-md border border-gray-200 p-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
 								/>
 							{/if}

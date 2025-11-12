@@ -6,7 +6,7 @@
 	type SortColumn = 'clinicName' | 'totalOrders' | 'totalPaid' | 'balance';
 	type SortDirection = 'asc' | 'desc';
 
-	let sortColumn = $state<SortColumn | null>(null);
+	let sortColumn = $state<SortColumn | null>('balance');
 	let sortDirection = $state<SortDirection>('asc');
 
 	function fmt(v: unknown) {
@@ -75,7 +75,7 @@
 		} else if (balanceValue < 0) {
 			return 'bg-red-300 ';
 		} else {
-			return 'bg-gray-300 ';
+			return 'bg-white ';
 		}
 	}
 
@@ -336,11 +336,18 @@
 							{/if}
 						</td>
 						<td class="px-6 py-4 text-center text-sm whitespace-nowrap">
-							<a
-								href={`/?clinic_id=${b.clinicId}&payment_status=unpaid`}
-								class="inline-block rounded bg-indigo-600 px-3 py-1 text-sm font-medium text-white hover:bg-indigo-500"
-								>Details</a
-							>
+							<div class="flex items-center justify-center gap-2">
+								<a
+									href={`/?clinic_id=${b.clinicId}&remarks=finished&payment_status=unpaid`}
+									class="inline-block rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-500"
+									>Finished</a
+								>
+								<a
+									href={`/?clinic_id=${b.clinicId}&remarks=pending&payment_status=unpaid`}
+									class="inline-block rounded bg-orange-600 px-3 py-1 text-sm font-medium text-white hover:bg-orange-500"
+									>Pending</a
+								>
+							</div>
 						</td>
 					</tr>
 				{/each}
