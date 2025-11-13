@@ -24,16 +24,19 @@
 	onMount(() => {
 		try {
 			const p = new URLSearchParams(window.location.search);
-			remarksValue = p.get('remarks') || 'finished';
-			statusValue = p.get('status') || '';
-			clinicValue = p.get('clinic_id') || '';
-
-			// If no remarks parameter in URL, set it to 'finished' and update URL
-			if (!p.get('remarks')) {
+			const remarksParam = p.get('remarks');
+			// If remarks parameter doesn't exist, default to 'finished' and update URL
+			// If it exists (even if empty string), use that value
+			if (remarksParam === null) {
+				remarksValue = 'finished';
 				p.set('remarks', 'finished');
 				const base = window.location.pathname + '?' + p.toString();
 				window.history.replaceState({}, '', base);
+			} else {
+				remarksValue = remarksParam || '';
 			}
+			statusValue = p.get('status') || '';
+			clinicValue = p.get('clinic_id') || '';
 		} catch (e) {
 			// noop
 		}
@@ -469,8 +472,8 @@
 					const val = (e.target as HTMLSelectElement).value;
 					remarksValue = val;
 					const params = new URLSearchParams(window.location.search);
-					if (val) params.set('remarks', val);
-					else params.delete('remarks');
+					// Always set the parameter, use empty string for "All" to explicitly show all
+					params.set('remarks', val || '');
 					const base = window.location.pathname + '?' + params.toString();
 					window.location.href = base;
 				}}

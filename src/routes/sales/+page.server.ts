@@ -1,10 +1,9 @@
 import type { Actions, PageServerLoad } from '../$types';
 import { db } from '$lib/server/db';
 import { clinics, doctors, history, records, supply, orders, orderItems } from '$lib/server/db/schema';
-import { desc, sql } from 'drizzle-orm';
+import { desc, sql, and, eq, isNotNull, between } from 'drizzle-orm';
 import { convertFileToBytea } from '$lib';
 import { redirect } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
 // // dev-only mocks
 // let devMocks: typeof import('$lib/mock/sales') | null = null;
 // if (import.meta.env && import.meta.env.DEV) {
@@ -36,10 +35,14 @@ const formatDate = (date: Date): string => {
 };
 export const load: PageServerLoad = async ({ url }) => {
   const searchParams = url.searchParams;
-  const status = searchParams.get('status');
+  const status = searchParams.get('status') || null;
   const exactDate = searchParams.get('date');
-  const remarks = searchParams.get('remarks');
-  const clinicId = searchParams.get('clinic_id');
+  // If remarks parameter exists but is empty string, show all (null)
+  // If remarks parameter doesn't exist, default to 'finished'
+  // If remarks parameter has a value, use that value
+  const remarksParam = searchParams.get('remarks');
+  const remarks = remarksParam === null ? 'finished' : remarksParam === '' ? null : remarksParam;
+  const clinicId = searchParams.get('clinic_id') || null;
   // if (import.meta.env && import.meta.env.DEV && devMocks) {
   //   // Use mock data in development
   //   const recordData = devMocks.getMockRecords({ status, exactDate, remarks });
@@ -57,6 +60,14 @@ export const load: PageServerLoad = async ({ url }) => {
 
   if (exactDate) {
     const date = new Date(exactDate);
+    // Build conditions array, filtering out undefined values
+    const conditions = [
+      sql`DATE(${records.dateDropoff}) = ${exactDate}`,
+      status && status !== '' ? eq(orders.paymentStatus, status) : undefined,
+      remarks && remarks !== '' ? eq(records.remarks, remarks) : undefined,
+      clinicId && clinicId !== '' ? eq(clinics.clinicId, parseInt(clinicId)) : undefined
+    ].filter((condition): condition is NonNullable<typeof condition> => condition !== undefined);
+    
     // Query for exact date with proper joins
     const recordData = await db
       .select({
@@ -71,11 +82,7 @@ export const load: PageServerLoad = async ({ url }) => {
       .innerJoin(orderItems, eq(orders.orderId, orderItems.orderId))
       .innerJoin(doctors, eq(records.doctorId, doctors.doctorId))
       .innerJoin(clinics, eq(doctors.clinicId, clinics.clinicId))
-      .where(
-        status || remarks || clinicId
-          ? sql`DATE(records.date_dropoff) = ${exactDate} AND (${status ? sql`${orders.paymentStatus} = ${status}` : sql`TRUE`}) AND (${remarks ? sql`${records.remarks} = ${remarks}` : sql`TRUE`}) AND (${clinicId ? sql`${clinics.clinicId} = ${parseInt(clinicId)}` : sql`TRUE`})`
-          : sql`DATE(records.date_dropoff) = ${exactDate}`
-      )
+      .where(and(...conditions))
       .groupBy(records.recordId, orders.orderId, doctors.doctorId, clinics.clinicId);
 
     const supplies = await db
@@ -111,6 +118,15 @@ export const load: PageServerLoad = async ({ url }) => {
     const startDate = new Date(selectedYear, selectedMonth - 1, 1);
     const endDate = new Date(selectedYear, selectedMonth, 0);
 
+    // Build conditions array, filtering out undefined values
+    const conditions = [
+      isNotNull(records.dateDropoff),
+      sql`${records.dateDropoff} BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)}`,
+      status && status !== '' ? eq(orders.paymentStatus, status) : undefined,
+      remarks && remarks !== '' ? eq(records.remarks, remarks) : undefined,
+      clinicId && clinicId !== '' ? eq(clinics.clinicId, parseInt(clinicId)) : undefined
+    ].filter((condition): condition is NonNullable<typeof condition> => condition !== undefined);
+
     const recordData = await db
       .select({
         record: records,
@@ -124,11 +140,7 @@ export const load: PageServerLoad = async ({ url }) => {
       .innerJoin(orderItems, eq(orders.orderId, orderItems.orderId))
       .innerJoin(doctors, eq(records.doctorId, doctors.doctorId))
       .innerJoin(clinics, eq(doctors.clinicId, clinics.clinicId))
-      .where(
-        status || remarks || clinicId
-          ? sql`records.date_dropoff IS NOT NULL AND records.date_dropoff BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)} AND (${status ? sql`${orders.paymentStatus} = ${status}` : sql`TRUE`}) AND (${remarks ? sql`${records.remarks} = ${remarks}` : sql`TRUE`}) AND (${clinicId ? sql`${clinics.clinicId} = ${parseInt(clinicId)}` : sql`TRUE`})`
-          : sql`records.date_dropoff IS NOT NULL AND records.date_dropoff BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)}`
-      )
+      .where(and(...conditions))
       .groupBy(records.recordId, orders.orderId, doctors.doctorId, clinics.clinicId);
     // .where(sql`records.date_dropoff IS NOT NULL AND records.date_dropoff BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)}`)
     // .where(status ? sql`(${orders.paymentStatus} = ${status})` : sql`TRUE`)
