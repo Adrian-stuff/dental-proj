@@ -392,6 +392,121 @@
 		return new Date(a).getTime() - new Date(b).getTime();
 	}
 
+	type IncomeSortColumn =
+		| 'date'
+		| 'clinic'
+		| 'patient'
+		| 'orderTotal'
+		| 'paidAmount'
+		| 'status'
+		| 'remarks';
+
+	type ExpensesSortColumn = 'date' | 'description' | 'amount' | 'type';
+
+	type SortDirection = 'asc' | 'desc';
+
+	let incomeSort = $state<{ column: IncomeSortColumn; direction: SortDirection }>({
+		column: 'date',
+		direction: 'asc'
+	});
+
+	let expensesSort = $state<{ column: ExpensesSortColumn; direction: SortDirection }>({
+		column: 'date',
+		direction: 'asc'
+	});
+
+	function toggleIncomeSort(column: IncomeSortColumn) {
+		if (incomeSort.column === column) {
+			incomeSort = {
+				...incomeSort,
+				direction: incomeSort.direction === 'asc' ? 'desc' : 'asc'
+			};
+		} else {
+			incomeSort = { column, direction: 'asc' };
+		}
+	}
+
+	function toggleExpensesSort(column: ExpensesSortColumn) {
+		if (expensesSort.column === column) {
+			expensesSort = {
+				...expensesSort,
+				direction: expensesSort.direction === 'asc' ? 'desc' : 'asc'
+			};
+		} else {
+			expensesSort = { column, direction: 'asc' };
+		}
+	}
+
+	function compareValues(a: string | number, b: string | number, direction: SortDirection): number {
+		let result: number;
+
+		if (typeof a === 'number' && typeof b === 'number') {
+			result = a - b;
+		} else {
+			const aStr = String(a).toLowerCase();
+			const bStr = String(b).toLowerCase();
+			if (aStr < bStr) result = -1;
+			else if (aStr > bStr) result = 1;
+			else result = 0;
+		}
+
+		return direction === 'asc' ? result : -result;
+	}
+
+	function sortIncomeTransactions(
+		a: WeeklyTransactions['transactions'][number],
+		b: WeeklyTransactions['transactions'][number]
+	): number {
+		switch (incomeSort.column) {
+			case 'date':
+				return incomeSort.direction === 'asc'
+					? sortByDate(a.dateDropoff, b.dateDropoff)
+					: sortByDate(b.dateDropoff, a.dateDropoff);
+			case 'clinic':
+				return compareValues(a.clinic, b.clinic, incomeSort.direction);
+			case 'patient':
+				return compareValues(a.patientName, b.patientName, incomeSort.direction);
+			case 'orderTotal':
+				return compareValues(a.orderTotal, b.orderTotal, incomeSort.direction);
+			case 'paidAmount':
+				return compareValues(a.paidAmount, b.paidAmount, incomeSort.direction);
+			case 'status':
+				return compareValues(a.paymentStatus, b.paymentStatus, incomeSort.direction);
+			case 'remarks':
+				return compareValues(
+					a.record?.remarks ?? 'pending',
+					b.record?.remarks ?? 'pending',
+					incomeSort.direction
+				);
+		}
+	}
+
+	function sortExpenses(
+		a: WeeklyTransactions['expenses'][number],
+		b: WeeklyTransactions['expenses'][number]
+	): number {
+		switch (expensesSort.column) {
+			case 'date':
+				return expensesSort.direction === 'asc'
+					? sortByDate(a.date, b.date)
+					: sortByDate(b.date, a.date);
+			case 'description':
+				return compareValues(a.description, b.description, expensesSort.direction);
+			case 'amount':
+				return compareValues(a.amount, b.amount, expensesSort.direction);
+			case 'type':
+				return compareValues(a.type, b.type, expensesSort.direction);
+		}
+	}
+
+	function getSortedTransactions(week: WeeklyTransactions) {
+		return [...week.transactions].sort((a, b) => sortIncomeTransactions(a, b));
+	}
+
+	function getSortedExpenses(week: WeeklyTransactions) {
+		return [...week.expenses].sort((a, b) => sortExpenses(a, b));
+	}
+
 	function deleteWeeklySalaryExpense(weekRange: string, expenseIndex: number) {
 		const weekIndex = financialData.weekly.findIndex((w) => w.weekRange === weekRange);
 		if (weekIndex !== -1) {
@@ -568,39 +683,63 @@
 									<thead class="bg-gray-50">
 										<tr>
 											<th
-												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleIncomeSort('date')}
 											>
 												Drop-off Date
+												{#if incomeSort.column === 'date'}
+													<span>{incomeSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 											<th
-												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleIncomeSort('clinic')}
 											>
 												Clinic Name
+												{#if incomeSort.column === 'clinic'}
+													<span>{incomeSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 											<th
-												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleIncomeSort('patient')}
 											>
 												Patient Name
+												{#if incomeSort.column === 'patient'}
+													<span>{incomeSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 											<th
-												class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleIncomeSort('orderTotal')}
 											>
 												Order Total
+												{#if incomeSort.column === 'orderTotal'}
+													<span>{incomeSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 											<th
-												class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleIncomeSort('paidAmount')}
 											>
 												Paid Amount
+												{#if incomeSort.column === 'paidAmount'}
+													<span>{incomeSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 											<th
-												class="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleIncomeSort('status')}
 											>
 												Status / Remarks
+												{#if incomeSort.column === 'status' || incomeSort.column === 'remarks'}
+													<span>{incomeSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-gray-200 bg-white">
-										{#each week.transactions as transaction}
+										{#each getSortedTransactions(week) as transaction}
 											<tr
 												class={`
 												border-b border-gray-200 transition-colors
@@ -680,29 +819,45 @@
 									<thead class="bg-gray-50">
 										<tr>
 											<th
-												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleExpensesSort('date')}
 											>
 												Date
+												{#if expensesSort.column === 'date'}
+													<span>{expensesSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 											<th
-												class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleExpensesSort('description')}
 											>
 												Description
+												{#if expensesSort.column === 'description'}
+													<span>{expensesSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 											<th
-												class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleExpensesSort('amount')}
 											>
 												Amount
+												{#if expensesSort.column === 'amount'}
+													<span>{expensesSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 											<th
-												class="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase"
+												class="cursor-pointer px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase select-none"
+												onclick={() => toggleExpensesSort('type')}
 											>
 												Type
+												{#if expensesSort.column === 'type'}
+													<span>{expensesSort.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+												{/if}
 											</th>
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-gray-200 bg-white">
-										{#each week.expenses as expense, expenseIndex}
+										{#each getSortedExpenses(week) as expense, expenseIndex}
 											<tr>
 												<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
 													{formatDate(expense.date)}
