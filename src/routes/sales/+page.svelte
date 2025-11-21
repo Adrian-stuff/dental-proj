@@ -152,9 +152,15 @@
 		totalProfit: 0
 	});
 
+	// Controls ordering of weeks (e.g. Week 4 → Week 1 or Week 1 → Week 4)
+	let weekSortDirection = $state<'asc' | 'desc'>('desc');
+
 	function recalculateFinancialData() {
 		// Calculate weekly data
-		const weekly = groupTransactionsByWeek(recordData, supplies, staffSalaries);
+		const weeklyRaw = groupTransactionsByWeek(recordData, supplies, staffSalaries);
+		// Apply week sort (week 4 → 1 or 1 → 4)
+		const weekly = weekSortDirection === 'asc' ? weeklyRaw : [...weeklyRaw].reverse();
+
 		// Calculate totals
 		const totalIncome = calculateTotalIncome(recordData);
 		const totalSupply = calculateTotalSupply(supplies);
@@ -423,6 +429,11 @@
 			};
 		} else {
 			incomeSort = { column, direction: 'asc' };
+		}
+
+		// Keep week ordering in sync with the date sort on the income table
+		if (column === 'date') {
+			weekSortDirection = incomeSort.direction;
 		}
 	}
 
