@@ -52,9 +52,3 @@ CREATE TABLE IF NOT EXISTS app_config (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert default Discord config placeholders
-INSERT INTO app_config (key, value, description) VALUES 
-  ('DISCORD_BOT_TOKEN', 'MTQ1MTQ3OTU3MDc4NzIwOTIxNg.Gl6H6e.n6rIuaVtRxwE6o4m01Jt4J18EBo1DocADptOhY', 'Discord bot token from developer portal'),
-  ('DISCORD_GUILD_ID', '1451480285462921259', 'Your Discord server ID'),
-  ('DISCORD_CHANNEL_ID', '1451480285462921259', 'Optional channel for bot logs')
-ON CONFLICT (key) DO NOTHING;
