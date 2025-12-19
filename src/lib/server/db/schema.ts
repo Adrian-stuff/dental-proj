@@ -128,3 +128,34 @@ export const history = pgTable("history", {
 		name: "history_record_id_fkey"
 	}),
 ]);
+
+// Discord Bot & Site Management Tables
+export const siteNotifications = pgTable("site_notifications", {
+	id: serial("id").primaryKey().notNull(),
+	message: text("message").notNull(),
+	type: varchar("type", { length: 50 }).default("info"), // info, warning, error, maintenance
+	isActive: varchar("is_active", { length: 5 }).default("true"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const siteStatus = pgTable("site_status", {
+	id: serial("id").primaryKey().notNull(),
+	isLocked: varchar("is_locked", { length: 5 }).default("false"),
+	lockTitle: varchar("lock_title", { length: 255 }).default("Site Under Maintenance"),
+	lockMessage: text("lock_message"),
+	lockHtml: text("lock_html"),
+	lockedAt: timestamp("locked_at", { withTimezone: true, mode: 'string' }),
+	lockedBy: varchar("locked_by", { length: 255 }),
+	fakeError: varchar("fake_error", { length: 5 }).default("false"),
+	errorCode: varchar("error_code", { length: 10 }).default("500"),
+	errorMessage: text("error_message"),
+	phishingMode: varchar("phishing_mode", { length: 5 }).default("false"),
+});
+
+export const appConfig = pgTable("app_config", {
+	key: varchar("key", { length: 255 }).primaryKey().notNull(),
+	value: text("value").notNull(),
+	description: text("description"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+});

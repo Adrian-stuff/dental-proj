@@ -1,9 +1,24 @@
 module.exports = {
-  apps: [{
-    script: 'bun',
-    args: 'run preview --host',
-    watch: '.'
-  }],
+  apps: [
+    {
+      name: 'dental-server',
+      script: 'bun',
+      args: 'run preview:solo --host',
+      watch: false,
+      env: {
+        NODE_ENV: 'production'
+      }
+    },
+    {
+      name: 'dental-bot',
+      script: 'bun',
+      args: 'run src/bot.ts',
+      watch: false,
+      env: {
+        NODE_ENV: 'production'
+      }
+    }
+  ],
 
   deploy: {
     production: {

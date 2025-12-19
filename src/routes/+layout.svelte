@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import '../app.css';
+	import NotificationBanner from '$lib/components/NotificationBanner.svelte';
 	let { children } = $props();
 
 	let isMenuOpen = $state(false);
@@ -33,6 +34,8 @@
 <svelte:head>
 	<title>{getPageTitle(page.url.pathname)} | Cassey Dental Records System</title>
 </svelte:head>
+
+<NotificationBanner />
 
 <nav class="top-0 left-0 z-50 w-full bg-[#164154] text-white shadow-md print:hidden">
 	<div class="mx-auto flex items-center justify-between px-4 py-2">
