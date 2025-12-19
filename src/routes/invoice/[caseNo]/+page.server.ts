@@ -1,5 +1,5 @@
 
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { records, orders, orderItems, doctors, clinics, caseTypes } from '$lib/server/db/schema';
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
@@ -24,7 +24,10 @@ export const load = (async ({ params }) => {
         clinicName: clinics.clinicName,
         doctorName: doctors.doctorName,
         orderItems: orderItems,
-        caseTypeName: caseTypes.caseTypeName
+        caseTypeName: caseTypes.caseTypeName,
+        orderCreatedAt: orders.createdAt,
+        // Use COALESCE to get the latest available date: dateDropoff > datePickup > order createdAt
+        invoiceDate: sql<string>`COALESCE(${records.dateDropoff}, ${records.datePickup}, ${orders.createdAt}::date)`
       })
       .from(records)
       .innerJoin(orders, eq(records.orderId, orders.orderId))
@@ -39,7 +42,7 @@ export const load = (async ({ params }) => {
     }
 
     const invoice = {
-      date: result[0].dateDropoff,
+      date: result[0].invoiceDate || result[0].dateDropoff || result[0].datePickup || new Date().toISOString().split('T')[0],
       clinic_name: result[0].clinicName,
       patient_name: result[0].patientName,
       doctor_name: result[0].doctorName,
