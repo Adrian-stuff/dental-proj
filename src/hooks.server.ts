@@ -1,7 +1,19 @@
-import type { Handle } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
+import type { Handle, ServerInit } from '@sveltejs/kit';
+import { client, db } from '$lib/server/db';
+import updateSql from '../updatedb.sql?raw';
 import { siteStatus } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+
+// Apply database updates on startup so new tables exist before any page needs them.
+// updatedb.sql is idempotent and runs as a single transaction (all or nothing).
+export const init: ServerInit = async () => {
+  try {
+    await client.unsafe(updateSql);
+    console.log('Database updates applied');
+  } catch (error) {
+    console.error('Failed to apply database updates:', error);
+  }
+};
 
 // Get site status from database using Drizzle
 async function getSiteStatus() {

@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { caseTypes, clinics, doctors, history, records, orders, orderItems } from '$lib/server/db/schema';
+import { caseTypes, clinics, doctors, history, records, orders, orderItems, payments } from '$lib/server/db/schema';
 import { desc, eq, and, sql } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
@@ -192,6 +192,7 @@ export const actions = {
           await tx.delete(history).where(eq(history.recordId, parseInt(recordId)));
           await tx.delete(orderItems).where(eq(orderItems.orderId, record[0].orderId!));
           await tx.delete(records).where(eq(records.recordId, parseInt(recordId)));
+          await tx.delete(payments).where(eq(payments.orderId, record[0].orderId!));
           await tx.delete(orders).where(eq(orders.orderId, record[0].orderId!));
         }
       });

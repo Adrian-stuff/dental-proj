@@ -1,4 +1,5 @@
 -- Drop tables in the correct order to satisfy dependencies
+DROP TABLE IF EXISTS payments CASCADE; -- Drop payments before orders, which it depends on
 DROP TABLE IF EXISTS history CASCADE; -- Drop history first, as it depends on records
 DROP TABLE IF EXISTS records CASCADE; -- Drop records next, as both history and other tables depend on it.
 DROP TABLE IF EXISTS doctors CASCADE; -- Drop doctors, which depends on clinics

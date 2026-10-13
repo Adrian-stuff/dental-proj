@@ -1,6 +1,6 @@
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { orderItems, orders, records, caseTypes } from '$lib/server/db/schema';
+import { orderItems, orders, records, caseTypes, payments } from '$lib/server/db/schema';
 import { desc, eq, sql } from 'drizzle-orm';
 import { redirect } from '@sveltejs/kit';
 
@@ -58,6 +58,11 @@ export const actions = {
         .where(eq(orderItems.orderId, orderId));
 
       await db.transaction(async (tx) => {
+        const [currentOrder] = await tx
+          .select({ paidAmount: orders.paidAmount })
+          .from(orders)
+          .where(eq(orders.orderId, orderId));
+
         // Update order
         await tx.update(orders)
           .set({
@@ -67,6 +72,18 @@ export const actions = {
             paymentMethod: data.get("final_payment_method")?.toString()
           } as any)
           .where(eq(orders.orderId, orderId));
+
+        // Log the change in paid amount so the money history keeps the date it came in
+        const paidDelta =
+          Number(data.get("paid_amount")?.toString() || 0) - Number(currentOrder?.paidAmount || 0);
+        if (paidDelta) {
+          await tx.insert(payments).values({
+            orderId,
+            amount: paidDelta.toFixed(2),
+            paymentMethod: data.get("final_payment_method")?.toString(),
+            paymentDate: sql`CURRENT_DATE`,
+          } as any);
+        }
 
         // Update order items and case numbers
         for (const [index, item] of orderItemsData.entries()) {

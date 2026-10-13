@@ -1,6 +1,6 @@
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { caseTypes, clinics, doctors, history, orderItems, orders, records } from '$lib/server/db/schema';
+import { caseTypes, clinics, doctors, history, orderItems, orders, payments, records } from '$lib/server/db/schema';
 import { desc, eq, sql } from 'drizzle-orm';
 import { convertFileToBytea } from '$lib';
 import { redirect } from '@sveltejs/kit';
@@ -40,6 +40,15 @@ export const actions = {
           excessPayment: data.get('excess_payment'),
           paymentMethod: data.get('payment_method'),
         } as typeof orders.$inferInsert).returning({ id: orders.orderId });
+        const paidAmount = Number(data.get('paid_amount')?.toString() || 0);
+        if (paidAmount) {
+          await tx.insert(payments).values({
+            orderId: orderID[0].id,
+            amount: paidAmount.toString(),
+            paymentMethod: data.get('payment_method'),
+            paymentDate: data.get('date'),
+          } as typeof payments.$inferInsert);
+        }
         let selectedJaw = data.get('selected_jaw')?.toString()
         console.log("order_id", orderID);
 

@@ -52,3 +52,24 @@ CREATE TABLE IF NOT EXISTS app_config (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ============================================
+-- Payments log (money in history)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS payments (
+  payment_id SERIAL PRIMARY KEY,
+  order_id INTEGER REFERENCES orders(order_id),
+  amount NUMERIC(10, 2) NOT NULL,  -- positive = money received, negative = correction
+  payment_method VARCHAR(255),
+  payment_date DATE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments (payment_date);
+
+-- Backfill payments made before the log existed, dated on the order date (idempotent)
+INSERT INTO payments (order_id, amount, payment_method, payment_date)
+SELECT o.order_id, o.paid_amount, o.payment_method, o.order_date
+FROM orders o
+WHERE COALESCE(o.paid_amount, 0) <> 0
+  AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.order_id = o.order_id);

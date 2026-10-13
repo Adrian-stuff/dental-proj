@@ -73,6 +73,23 @@ END`),
 	index("idx_orders_payment_status").using("btree", table.paymentStatus.asc().nullsLast().op("text_ops")),
 ]);
 
+export const payments = pgTable("payments", {
+	paymentId: serial("payment_id").primaryKey().notNull(),
+	orderId: integer("order_id"),
+	// positive = money received, negative = correction of a previously recorded payment
+	amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+	paymentMethod: varchar("payment_method", { length: 255 }),
+	paymentDate: date("payment_date").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_payments_payment_date").using("btree", table.paymentDate.asc().nullsLast().op("date_ops")),
+	foreignKey({
+		columns: [table.orderId],
+		foreignColumns: [orders.orderId],
+		name: "payments_order_id_fkey"
+	}),
+]);
+
 export const caseTypes = pgTable("case_types", {
 	caseTypeId: serial("case_type_id").primaryKey().notNull(),
 	caseTypeName: varchar("case_type_name", { length: 255 }).notNull(),

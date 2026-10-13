@@ -341,6 +341,11 @@
 								class="inline-block rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-500"
 								>Details</a
 							>
+							<a
+								href={`/soa/${b.clinicId}`}
+								class="inline-block rounded bg-gray-600 px-3 py-1 text-sm font-medium text-white hover:bg-gray-500"
+								>SOA</a
+							>
 						</td>
 					</tr>
 				{/each}
