@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from '../$types';
 import { db } from '$lib/server/db';
-import { clinics, doctors, history, records, supply, orders, orderItems } from '$lib/server/db/schema';
-import { desc, sql, and, eq, isNotNull, between } from 'drizzle-orm';
+import { clinics, doctors, history, records, supply, orders, orderItems, payrollRunItems } from '$lib/server/db/schema';
+import { desc, sql, and, eq, isNotNull, between, getTableColumns } from 'drizzle-orm';
 import { convertFileToBytea } from '$lib';
 import { redirect } from '@sveltejs/kit';
 // // dev-only mocks
@@ -33,6 +33,15 @@ const formatDate = (date: Date): string => {
 
   return `${year}-${month}-${day}`;
 };
+// Supply rows plus whether each one was created by a generated payroll
+const supplyWithPayrollFlag = () =>
+  db
+    .select({
+      ...getTableColumns(supply),
+      isPayroll: sql<boolean>`exists (select 1 from ${payrollRunItems} where ${payrollRunItems.supplyId} = ${supply.supplyId})`
+    })
+    .from(supply);
+
 export const load: PageServerLoad = async ({ url }) => {
   const searchParams = url.searchParams;
   const status = searchParams.get('status') || null;
@@ -85,9 +94,7 @@ export const load: PageServerLoad = async ({ url }) => {
       .where(and(...conditions))
       .groupBy(records.recordId, orders.orderId, doctors.doctorId, clinics.clinicId);
 
-    const supplies = await db
-      .select()
-      .from(supply)
+    const supplies = await supplyWithPayrollFlag()
       .where(sql`DATE(supply_date) = ${exactDate}`);
 
     // Get all clinics for the filter dropdown
@@ -146,9 +153,7 @@ export const load: PageServerLoad = async ({ url }) => {
     // .where(status ? sql`(${orders.paymentStatus} = ${status})` : sql`TRUE`)
     // .groupBy(records.recordId, orders.orderId, doctors.doctorId, clinics.clinicId);
 
-    const supplies = await db
-      .select()
-      .from(supply)
+    const supplies = await supplyWithPayrollFlag()
       .where(sql`supply_date BETWEEN ${formatDate(startDate)} AND ${formatDate(endDate)}`);
 
     // Get all clinics for the filter dropdown

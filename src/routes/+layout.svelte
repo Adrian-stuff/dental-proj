@@ -16,6 +16,8 @@
 				return 'Sales';
 			case '/expenses':
 				return 'Expenses';
+			case '/payroll':
+				return 'Payroll';
 			case '/cashflow':
 				return 'Money History';
 			case '/edit_info':
@@ -105,6 +107,10 @@
 				href="/expenses">EXPENSES</a
 			>
 			<a
+				class="rounded border border-[#A1AEB3] bg-[#7C3AED] p-2 text-white shadow-sm hover:bg-[#6D28D9] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
+				href="/payroll">PAYROLL</a
+			>
+			<a
 				class="rounded border border-[#A1AEB3] bg-[#2563EB] p-2 text-white shadow-sm hover:bg-[#1D4ED8] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
 				href="/edit_info">EDIT INFOS</a
 			>
@@ -147,6 +153,10 @@
 		<a
 			class="mb-2 block rounded border border-[#A1AEB3] bg-[#DC2626] p-2 text-white shadow-sm hover:bg-[#B91C1C] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
 			href="/expenses">EXPENSES</a
+		>
+		<a
+			class="mb-2 block rounded border border-[#A1AEB3] bg-[#7C3AED] p-2 text-white shadow-sm hover:bg-[#6D28D9] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"
+			href="/payroll">PAYROLL</a
 		>
 		<a
 			class="mb-2 block rounded border border-[#A1AEB3] bg-[#2563EB] p-2 text-white shadow-sm hover:bg-[#1D4ED8] focus:ring-2 focus:ring-[#778B92] focus:ring-offset-1 focus:outline-none sm:text-sm"

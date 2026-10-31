@@ -146,6 +146,72 @@ export const history = pgTable("history", {
 	}),
 ]);
 
+// Payroll: a saved payout set is a reusable list of employees and their pay.
+// Generating payroll from it creates a payroll run, and each payout in the run
+// is also written to `supply` so it counts as an expense everywhere else.
+export const payrollSets = pgTable("payroll_sets", {
+	setId: serial("set_id").primaryKey().notNull(),
+	setName: varchar("set_name", { length: 255 }).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const payrollSetItems = pgTable("payroll_set_items", {
+	itemId: serial("item_id").primaryKey().notNull(),
+	setId: integer("set_id").notNull(),
+	employeeName: varchar("employee_name", { length: 255 }).notNull(),
+	amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+	sortOrder: integer("sort_order").default(0).notNull(),
+}, (table) => [
+	index("idx_payroll_set_items_set_id").using("btree", table.setId.asc().nullsLast().op("int4_ops")),
+	foreignKey({
+		columns: [table.setId],
+		foreignColumns: [payrollSets.setId],
+		name: "payroll_set_items_set_id_fkey"
+	}).onDelete("cascade"),
+]);
+
+export const payrollRuns = pgTable("payroll_runs", {
+	runId: serial("run_id").primaryKey().notNull(),
+	setId: integer("set_id"),
+	// snapshot of the set name, kept if the set is renamed or deleted
+	setName: varchar("set_name", { length: 255 }),
+	payDate: date("pay_date").notNull(),
+	periodStart: date("period_start"),
+	periodEnd: date("period_end"),
+	notes: text("notes"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_payroll_runs_pay_date").using("btree", table.payDate.asc().nullsLast().op("date_ops")),
+	foreignKey({
+		columns: [table.setId],
+		foreignColumns: [payrollSets.setId],
+		name: "payroll_runs_set_id_fkey"
+	}).onDelete("set null"),
+]);
+
+export const payrollRunItems = pgTable("payroll_run_items", {
+	runItemId: serial("run_item_id").primaryKey().notNull(),
+	runId: integer("run_id").notNull(),
+	employeeName: varchar("employee_name", { length: 255 }).notNull(),
+	amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+	// the expense row this payout created
+	supplyId: integer("supply_id"),
+}, (table) => [
+	index("idx_payroll_run_items_run_id").using("btree", table.runId.asc().nullsLast().op("int4_ops")),
+	index("idx_payroll_run_items_supply_id").using("btree", table.supplyId.asc().nullsLast().op("int4_ops")),
+	foreignKey({
+		columns: [table.runId],
+		foreignColumns: [payrollRuns.runId],
+		name: "payroll_run_items_run_id_fkey"
+	}).onDelete("cascade"),
+	foreignKey({
+		columns: [table.supplyId],
+		foreignColumns: [supply.supplyId],
+		name: "payroll_run_items_supply_id_fkey"
+	}).onDelete("set null"),
+]);
+
 // Discord Bot & Site Management Tables
 export const siteNotifications = pgTable("site_notifications", {
 	id: serial("id").primaryKey().notNull(),

@@ -267,7 +267,7 @@
 			date: string;
 			description: string;
 			amount: number;
-			type: 'supply' | 'salary';
+			type: 'supply' | 'salary' | 'payroll';
 		}>;
 		totalAmount: number;
 		totalExpenses: number;
@@ -343,7 +343,8 @@
 				date: supply.supplyDate,
 				description: supply.supplyDescription || 'Supply Cost',
 				amount,
-				type: 'supply'
+				// Expenses created by a generated payroll (see /payroll)
+				type: supply.isPayroll ? 'payroll' : 'supply'
 			});
 			weekData.totalExpenses += amount;
 			// Sort expenses by date after adding new one
@@ -887,7 +888,9 @@
 																? 'bg-blue-100 text-blue-800'
 																: expense.type === 'salary'
 																	? 'bg-purple-100 text-purple-800'
-																	: ''
+																	: expense.type === 'payroll'
+																		? 'bg-violet-100 text-violet-800'
+																		: ''
 														}`}
 													>
 														{expense.type}
@@ -925,7 +928,15 @@
 
 							<!-- Weekly Staff Salary Input -->
 							<div class="mt-4 rounded-lg bg-gray-50 p-4">
-								<h5 class="mb-2 text-sm font-semibold">Add Weekly Staff Salary</h5>
+								<div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+									<h5 class="text-sm font-semibold">Add Weekly Staff Salary</h5>
+									<a
+										href="/payroll"
+										class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 print:hidden"
+									>
+										Generate payroll from a saved set →
+									</a>
+								</div>
 								<div class="flex gap-4">
 									<div class="flex-1">
 										<input

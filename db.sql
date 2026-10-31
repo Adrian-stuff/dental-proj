@@ -1,4 +1,8 @@
 -- Drop tables in the correct order to satisfy dependencies
+DROP TABLE IF EXISTS payroll_run_items CASCADE; -- Payroll tables reference supply and each other
+DROP TABLE IF EXISTS payroll_runs CASCADE;
+DROP TABLE IF EXISTS payroll_set_items CASCADE;
+DROP TABLE IF EXISTS payroll_sets CASCADE;
 DROP TABLE IF EXISTS payments CASCADE; -- Drop payments before orders, which it depends on
 DROP TABLE IF EXISTS history CASCADE; -- Drop history first, as it depends on records
 DROP TABLE IF EXISTS records CASCADE; -- Drop records next, as both history and other tables depend on it.
